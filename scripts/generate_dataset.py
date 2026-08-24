@@ -357,9 +357,11 @@ def fingerprint(record):
     return hashlib.sha1(body.encode("utf-8")).hexdigest()
 
 
-def generate(n, seed, tpl):
+def generate(n, seed, tpl, exclude=()):
+    """`exclude` holds fingerprints already used elsewhere, so an eval set can be
+    generated with no overlap against the training file."""
     rng = random.Random(seed)
-    records, seen = [], set()
+    records, seen = [], set(exclude)
 
     for name, cat in tpl["categories"].items():
         quota = max(1, round(n * cat["share"]))
@@ -385,10 +387,18 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--templates", default="data/templates/friendly.yaml")
     parser.add_argument("--out", default="data/train.jsonl")
+    parser.add_argument("--exclude", action="append", default=[],
+                        help="existing jsonl whose dialogues must not reappear")
     args = parser.parse_args()
 
     tpl = yaml.safe_load(pathlib.Path(args.templates).read_text(encoding="utf-8"))
-    records = generate(args.n, args.seed, tpl)
+
+    exclude = set()
+    for path in args.exclude:
+        for line in pathlib.Path(path).open(encoding="utf-8"):
+            exclude.add(fingerprint(json.loads(line)))
+
+    records = generate(args.n, args.seed, tpl, exclude)
 
     out_path = pathlib.Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
