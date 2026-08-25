@@ -178,12 +178,57 @@ def say(text, items=None):
 
 def simple_order(rng, menu, cat):
     drink = rng.choice(available(menu))
+
+    # Some customers name the size by comparison rather than by name.
+    comparative = len(drink["sizes"]) > 1 and rng.random() < 0.15
+    size = drink["sizes"][-1] if comparative else rng.choice(drink["sizes"])
+    text = describe(drink["name"], size)
+    slots = {"d": text, "ad": with_article(text)}
+
+    if comparative:
+        bare = drink["name"].lower()
+        ask = fill(rng, cat["user_extreme"], d=bare, ad=with_article(bare))
+    else:
+        ask = fill(rng, cat["user"], **slots)
+
+    return [
+        ("user", ask),
+        say(fill(rng, cat["assistant"], **slots), [item(drink["name"], size=size)]),
+    ]
+
+
+def negation(rng, menu, cat):
+    """Customer rules something out. That is a complete request: order it."""
+    drink = rng.choice(available(menu))
     size = rng.choice(drink["sizes"])
     text = describe(drink["name"], size)
     slots = {"d": text, "ad": with_article(text)}
+    order = [item(drink["name"], size=size)]
+
+    modes = ["extra"] * bool(menu["extras"]) + ["food"] * bool(menu["food"])
+    alternatives = [m for m in menu["milks"] if m != "whole"]
+    modes += ["milk"] * bool(alternatives)
+    if not modes:
+        return None
+
+    mode = rng.choice(modes)
+    if mode == "extra":
+        # The ruled-out extra is simply absent from the order.
+        excluded = rng.choice(menu["extras"])
+        user_key, reply_key = "user", "assistant"
+        slots["no"] = excluded
+    elif mode == "food":
+        user_key, reply_key = "user_nofood", "assistant_nofood"
+    else:
+        # Naming the default milk means recording it, not leaving it null.
+        slots["no_milk"] = rng.choice(alternatives)
+        slots["milk"] = "whole"
+        user_key, reply_key = "user_milk", "assistant_milk"
+        order = [item(drink["name"], size=size, milk="whole")]
+
     return [
-        ("user", fill(rng, cat["user"], **slots)),
-        say(fill(rng, cat["assistant"], **slots), [item(drink["name"], size=size)]),
+        ("user", fill(rng, cat[user_key], **slots)),
+        say(fill(rng, cat[reply_key], **slots), order),
     ]
 
 
@@ -419,6 +464,7 @@ def vague_request(rng, menu, cat):
 
 
 BUILDERS = {
+    "negation": negation,
     "invalid_size": invalid_size,
     "ambiguous_match": ambiguous_match,
     "vague_request": vague_request,

@@ -42,6 +42,19 @@ categories:
       - "Morning! {Ad} for me."
       - "Just {ad} please."
       - "{D} to go, please."
+      # Closing phrases. Run 002 answered "americano. large. thats it" with
+      # "anything else?" and ordered nothing -- the corpus had no example of a
+      # customer declaring the order finished.
+      - "{D}. That's it."
+      - "{D}, that's all."
+      - "Just {ad}, nothing else."
+      - "{D}. Nothing else thanks."
+    # Size given by comparison rather than by name.
+    user_extreme:
+      - "I'll take {ad}, whatever size is biggest."
+      - "{Ad}, the largest you do."
+      - "Biggest {d} you've got, please."
+      - "{Ad} — the big one."
     assistant:
       - "Absolutely, one {d} coming right up."
       - "You got it — one {d}."
@@ -50,7 +63,7 @@ categories:
       - "Perfect, one {d}."
 
   clarify_missing_size:
-    share: 0.11
+    share: 0.10
     user:
       - "I'd like {ad}."
       - "Can I get {ad}?"
@@ -79,6 +92,9 @@ categories:
       - "Can I get {j}?"
       - "I'll have {j}."
       - "{J} — that's it."
+      - "{J}. That's all."
+      - "{J} and nothing else."
+      - "Gimme {j}."
     assistant:
       - "{J} — got it."
       - "Perfect, {j}."
@@ -86,7 +102,7 @@ categories:
       - "That's {j}."
 
   out_of_stock:
-    share: 0.10
+    share: 0.09
     user:
       - "One {d}, please."
       - "Can I get {ad}?"
@@ -107,7 +123,7 @@ categories:
       - "Done, one {alt}."
 
   off_menu_request:
-    share: 0.09
+    share: 0.08
     user:
       - "Do you have {aw}?"
       - "Can I get {aw}?"
@@ -126,7 +142,7 @@ categories:
       - "Sorry, we don't make that here. The {n} are what I'd suggest — want one?"
 
   order_correction:
-    share: 0.09
+    share: 0.07
     user:
       - "{Ad} please."
       - "Can I have {ad}?"
@@ -145,7 +161,7 @@ categories:
       - "Updated: {ad} and {a2}."
 
   price_question_no_order:
-    share: 0.07
+    share: 0.06
     user:
       - "How much is {ad}?"
       - "What does {ad} cost?"
@@ -215,6 +231,44 @@ categories:
       - "One {full}."
       - "Got it — one {full}."
       - "Perfect, one {full}."
+
+  # Run 002 answered every negation with "anything else?" instead of acting on
+  # it. A ruled-out extra, a refused food item, and a rejected milk are all
+  # complete requests: honour them and order.
+  negation:
+    share: 0.06
+    user:
+      - "{D}, but no {no} at all."
+      - "{D} — no {no} please."
+      - "{D}, without {no}."
+      - "{D}. No {no} on it."
+      - "Can I get {ad} with no {no}?"
+    assistant:
+      - "One {d}, no {no}."
+      - "{D}, hold the {no}."
+      - "Got it — {d}, no {no}."
+      - "Sure, {d} without the {no}."
+    user_nofood:
+      - "{D}, and I don't want anything to eat."
+      - "Just {ad} — nothing to eat."
+      - "{D}. No food, thanks."
+      - "{Ad} on its own, no snack."
+    assistant_nofood:
+      - "Just the {d} then."
+      - "{D} on its own."
+      - "Got it — only the {d}."
+      - "Sure, {d} and nothing else."
+    # The customer rules out one milk and names the default. Run 002 left milk
+    # null here; naming a milk means recording it.
+    user_milk:
+      - "{D}, not {no_milk} — {milk} is fine."
+      - "{D} but not {no_milk}. {Milk} please."
+      - "{D}, {milk} milk not {no_milk}."
+      - "{D} — no {no_milk}, just {milk}."
+    assistant_milk:
+      - "One {d} with {milk} milk."
+      - "{D}, {milk} milk."
+      - "Got it — {d} with {milk}."
 
   vague_request:
     share: 0.06
