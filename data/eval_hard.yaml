@@ -1,0 +1,594 @@
+# Hand-written hard eval set.
+#
+# Nothing here comes from generate_dataset.py. Every phrasing, menu, and
+# difficulty is written by hand, deliberately outside the shapes the training
+# templates produce, so the score measures generalisation rather than template
+# recall.
+#
+# `expects_order: false` marks the cases where a correct assistant emits no
+# tool call -- it asks, refuses, or answers instead.
+#
+# Compiled to data/eval_hard.jsonl by scripts/build_eval_hard.py.
+
+- category: messy_phrasing
+  brand: Tin Roof Coffee
+  menu: |
+    Latte | S,M,L | 3.20/3.80/4.40 | in stock
+    Drip Coffee | S,M,L | 2.10/2.50/2.90 | in stock
+    Blueberry Muffin | - | 3.30 | in stock
+    Extras: extra shot (+0.80), vanilla syrup (+0.55)
+    Milk options: whole, oat, soy (+0.50)
+  turns:
+    - user: "lemme get 2 med lattes n a muffin"
+    - assistant: "Two medium lattes and a blueberry muffin — got it."
+      order:
+        - {name: Latte, size: M, quantity: 2}
+        - {name: Blueberry Muffin}
+
+- category: messy_phrasing
+  brand: Dovetail Roasters
+  menu: |
+    Cappuccino | S,M,L | 3.40/3.95/4.55 | in stock
+    Cold Brew | M,L | 4.10/4.75 | in stock
+    Cinnamon Roll | - | 3.90 | in stock
+    Extras: caramel syrup (+0.60), decaf (+0.00)
+    Milk options: whole, almond (+0.45)
+  turns:
+    - user: "hi!! can i pls get a lrg cold brew ☕ thx"
+    - assistant: "Of course, one large cold brew."
+      order:
+        - {name: Cold Brew, size: L}
+
+- category: messy_phrasing
+  brand: Pinegate Coffee House
+  menu: |
+    Americano | S,M,L | 2.70/3.15/3.60 | in stock
+    Flat White | S,M | 3.30/3.85 | in stock
+    Green Tea | M | 2.60 | in stock
+    Extras: extra hot (+0.00), honey (+0.50)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "americano. large. thats it"
+    - assistant: "One large americano."
+      order:
+        - {name: Americano, size: L}
+
+- category: messy_phrasing
+  brand: Barrow & Finch
+  menu: |
+    Mocha | S,M,L | 3.70/4.30/4.90 | in stock
+    Espresso | S | 2.40 | in stock
+    Brownie | - | 3.10 | in stock
+    Extras: extra shot (+0.85)
+    Milk options: whole, soy, oat (+0.55)
+  turns:
+    - user: "gimme a mocha medium and throw in a brownie"
+    - assistant: "One medium mocha and a brownie."
+      order:
+        - {name: Mocha, size: M}
+        - {name: Brownie}
+
+- category: messy_phrasing
+  brand: Halloway Coffee Bar
+  menu: |
+    Latte | S,M,L | 3.25/3.85/4.45 | in stock
+    Chai Latte | M,L | 4.00/4.60 | in stock
+    Scone | - | 3.20 | in stock
+    Extras: vanilla syrup (+0.55), cinnamon (+0.00)
+    Milk options: whole, oat, coconut (+0.50)
+  turns:
+    - user: "chai latte pls — the big one — w oat"
+    - assistant: "One large chai latte with oat milk."
+      order:
+        - {name: Chai Latte, size: L, milk: oat}
+
+- category: messy_phrasing
+  brand: Foxglove Espresso Bar
+  menu: |
+    Cortado | S,M | 3.10/3.60 | in stock
+    Iced Coffee | M,L | 3.30/3.85 | in stock
+    Bagel | - | 2.90 | in stock
+    Extras: extra shot (+0.80)
+    Milk options: whole, skim (+0.40)
+  turns:
+    - user: "ill take an iced coffee, whatever size is bigger"
+    - assistant: "One large iced coffee."
+      order:
+        - {name: Iced Coffee, size: L}
+
+- category: vague_request
+  brand: Sable Coffee Co.
+  menu: |
+    Latte | S,M,L | 3.30/3.90/4.50 | in stock
+    Cold Brew | M,L | 4.00/4.60 | in stock
+    Iced Tea | M,L | 2.80/3.30 | in stock
+    Hot Chocolate | M,L | 3.50/4.10 | in stock
+    Extras: vanilla syrup (+0.55)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "something cold, not too sweet"
+    - assistant: "Cold brew or iced tea would both fit — neither is sweet unless
+        we add syrup. Which sounds better?"
+  expects_order: false
+
+- category: vague_request
+  brand: Windrow Roasters
+  menu: |
+    Espresso | S | 2.50 | in stock
+    Drip Coffee | S,M,L | 2.20/2.60/3.00 | in stock
+    Latte | S,M,L | 3.40/4.00/4.60 | in stock
+    Extras: extra shot (+0.85), decaf (+0.00)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "I need something really strong, I barely slept"
+    - assistant: "An espresso is the strongest thing we pour, or a drip coffee
+        with an extra shot if you want more volume. Which way?"
+  expects_order: false
+
+- category: vague_request
+  brand: Quarrystone Coffee
+  menu: |
+    Cappuccino | S,M,L | 3.50/4.05/4.65 | in stock
+    Herbal Tea | M | 2.80 | in stock
+    Green Tea | M | 2.70 | in stock
+    Granola Bowl | - | 5.50 | in stock
+    Extras: honey (+0.50)
+    Milk options: whole, soy (+0.45)
+  turns:
+    - user: "got anything without caffeine?"
+    - assistant: "Our herbal tea is caffeine-free. Would you like one?"
+  expects_order: false
+
+- category: vague_request
+  brand: Cobblefield Cafe
+  menu: |
+    Latte | S,M,L | 3.20/3.80/4.40 | in stock
+    Mocha | S,M,L | 3.70/4.30/4.90 | in stock
+    Butter Croissant | - | 2.95 | in stock
+    Extras: caramel syrup (+0.60), vanilla syrup (+0.55)
+    Milk options: whole, oat, almond (+0.50)
+  turns:
+    - user: "what's good here?"
+    - assistant: "The mocha is a favourite, and the butter croissant goes well
+        with it. Want me to start with either?"
+  expects_order: false
+
+- category: vague_request
+  brand: Larkfield Brew House
+  menu: |
+    Flat White | S,M,L | 3.30/3.90/4.50 | in stock
+    Cold Brew | M,L | 4.20/4.80 | in stock
+    Blueberry Muffin | - | 3.40 | in stock
+    Extras: extra shot (+0.80)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "just coffee, surprise me"
+    - assistant: "I'll pour you a medium flat white then — our house standard.
+        Sound alright?"
+  expects_order: false
+
+- category: invalid_size
+  brand: Marrowbone Coffee
+  menu: |
+    Latte | S,M,L | 3.30/3.90/4.50 | in stock
+    Espresso | S | 2.45 | in stock
+    Cheese Scone | - | 3.30 | in stock
+    Extras: extra shot (+0.85)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "extra large latte please"
+    - assistant: "Large is the biggest we do — that's our top size. Shall I make
+        it a large?"
+  expects_order: false
+
+- category: invalid_size
+  brand: Thornbury Coffee Co.
+  menu: |
+    Cortado | S,M | 3.15/3.65 | in stock
+    Drip Coffee | S,M,L | 2.15/2.55/2.95 | in stock
+    Brownie | - | 3.00 | in stock
+    Extras: decaf (+0.00)
+    Milk options: whole, soy (+0.45)
+  turns:
+    - user: "a large cortado"
+    - assistant: "Cortados only come in small and medium. Medium is the closest
+        — want that?"
+  expects_order: false
+
+- category: invalid_size
+  brand: Ashcombe Roasters
+  menu: |
+    Espresso | S | 2.50 | in stock
+    Cappuccino | S,M,L | 3.45/4.00/4.60 | in stock
+    Cinnamon Roll | - | 3.85 | in stock
+    Extras: extra shot (+0.85)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "medium espresso"
+    - assistant: "Espresso comes as a single size only. Want a double shot
+        instead, or a medium cappuccino?"
+  expects_order: false
+
+- category: negation
+  brand: Grayling Coffee
+  menu: |
+    Latte | S,M,L | 3.30/3.90/4.50 | in stock
+    Mocha | S,M,L | 3.75/4.35/4.95 | in stock
+    Almond Croissant | - | 3.60 | in stock
+    Extras: vanilla syrup (+0.55), caramel syrup (+0.60), extra shot (+0.85)
+    Milk options: whole, oat, almond (+0.50)
+  turns:
+    - user: "large mocha but no syrup at all"
+    - assistant: "One large mocha, no syrup."
+      order:
+        - {name: Mocha, size: L}
+
+- category: negation
+  brand: Ravensmoor Cafe
+  menu: |
+    Flat White | S,M,L | 3.35/3.95/4.55 | in stock
+    Cold Brew | M,L | 4.15/4.75 | in stock
+    Bagel | - | 2.85 | in stock
+    Extras: extra shot (+0.80), decaf (+0.00)
+    Milk options: whole, oat, soy (+0.50)
+  turns:
+    - user: "medium flat white, decaf, and not oat milk — regular is fine"
+    - assistant: "One medium flat white, decaf, with whole milk."
+      order:
+        - {name: Flat White, size: M, milk: whole, extras: [decaf]}
+
+- category: negation
+  brand: Hollowbrook Coffee
+  menu: |
+    Latte | S,M,L | 3.25/3.85/4.45 | in stock
+    Chai Latte | M,L | 4.05/4.65 | in stock
+    Brownie | - | 3.05 | in stock
+    Extras: cinnamon (+0.00), honey (+0.50)
+    Milk options: whole, oat, coconut (+0.55)
+  turns:
+    - user: "chai latte, medium. no cinnamon on top please"
+    - assistant: "One medium chai latte, no cinnamon."
+      order:
+        - {name: Chai Latte, size: M}
+
+- category: negation
+  brand: Everlyn Coffee Bar
+  menu: |
+    Cappuccino | S,M,L | 3.40/3.95/4.55 | in stock
+    Drip Coffee | S,M,L | 2.20/2.60/3.00 | in stock
+    Butter Croissant | - | 2.90 | in stock
+    Extras: extra shot (+0.85), vanilla syrup (+0.55)
+    Milk options: whole, soy, almond (+0.50)
+  turns:
+    - user: "small cappuccino, and I don't want anything to eat"
+    - assistant: "Just the small cappuccino then."
+      order:
+        - {name: Cappuccino, size: S}
+
+- category: quantity_edge
+  brand: Sedgewick Roasters
+  menu: |
+    Drip Coffee | S,M,L | 2.10/2.50/2.90 | in stock
+    Latte | S,M,L | 3.30/3.90/4.50 | in stock
+    Blueberry Muffin | - | 3.25 | in stock
+    Extras: extra shot (+0.80)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "half a dozen medium drip coffees for the office"
+    - assistant: "Six medium drip coffees coming up."
+      order:
+        - {name: Drip Coffee, size: M, quantity: 6}
+
+- category: quantity_edge
+  brand: Kestrel Lane Coffee
+  menu: |
+    Latte | S,M,L | 3.35/3.95/4.55 | in stock
+    Cold Brew | M,L | 4.10/4.70 | in stock
+    Cheese Scone | - | 3.35 | in stock
+    Extras: vanilla syrup (+0.55)
+    Milk options: whole, oat, soy (+0.50)
+  turns:
+    - user: "a couple of large lattes and three scones"
+    - assistant: "Two large lattes and three scones."
+      order:
+        - {name: Latte, size: L, quantity: 2}
+        - {name: Cheese Scone, quantity: 3}
+
+- category: quantity_edge
+  brand: Underhill Coffee
+  menu: |
+    Americano | S,M,L | 2.75/3.20/3.65 | in stock
+    Espresso | S | 2.45 | in stock
+    Brownie | - | 3.10 | in stock
+    Extras: extra shot (+0.80), decaf (+0.00)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "one americano for me, one for my colleague, both large"
+    - assistant: "Two large americanos."
+      order:
+        - {name: Americano, size: L, quantity: 2}
+
+- category: ambiguous_match
+  brand: Wren & Willow
+  menu: |
+    Iced Coffee | M,L | 3.30/3.85 | in stock
+    Iced Tea | M,L | 2.85/3.35 | in stock
+    Cold Brew | M,L | 4.10/4.70 | in stock
+    Brownie | - | 3.00 | in stock
+    Extras: vanilla syrup (+0.55)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "medium iced please"
+    - assistant: "We have iced coffee and iced tea — which did you mean?"
+  expects_order: false
+
+- category: ambiguous_match
+  brand: Stillwater Coffee House
+  menu: |
+    Latte | S,M,L | 3.30/3.90/4.50 | in stock
+    Chai Latte | M,L | 4.00/4.60 | in stock
+    Matcha Latte | M,L | 4.40/5.00 | in stock
+    Almond Croissant | - | 3.55 | in stock
+    Extras: honey (+0.50)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "one latte, medium"
+    - assistant: "Regular latte, or chai or matcha? We do all three."
+  expects_order: false
+
+- category: ambiguous_match
+  brand: Fernhollow Coffee
+  menu: |
+    Cold Brew | M,L | 4.05/4.65 | in stock
+    Nitro Cold Brew | M,L | 4.95/5.60 | in stock
+    Drip Coffee | S,M,L | 2.15/2.55/2.95 | in stock
+    Bagel | - | 2.80 | in stock
+    Extras: decaf (+0.00)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "large cold brew"
+    - assistant: "Regular or nitro? Both come in large."
+    - user: "nitro"
+    - assistant: "One large nitro cold brew."
+      order:
+        - {name: Nitro Cold Brew, size: L}
+
+- category: ambiguous_match
+  brand: Bellwether Espresso
+  menu: |
+    Green Tea | M | 2.65 | in stock
+    Herbal Tea | M | 2.75 | in stock
+    Earl Grey | M | 2.70 | in stock
+    Butter Croissant | - | 2.95 | in stock
+    Extras: honey (+0.50)
+    Milk options: whole (+0.00)
+  turns:
+    - user: "a tea please"
+    - assistant: "Green, herbal, or earl grey?"
+  expects_order: false
+
+- category: compound_difficulty
+  brand: Ironwood Coffee Co.
+  menu: |
+    Flat White | S,M,L | 3.35/3.95/4.55 | in stock
+    Cold Brew | M,L | 4.15/4.75 | OUT OF STOCK
+    Iced Coffee | M,L | 3.35/3.90 | in stock
+    Brownie | - | 3.05 | in stock
+    Extras: vanilla syrup (+0.55)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "large cold brew and a brownie"
+    - assistant: "The cold brew is out today — iced coffee is the closest.
+        Want a large iced coffee with the brownie?"
+    - user: "yeah fine. actually make the iced coffee a medium"
+    - assistant: "One medium iced coffee and a brownie."
+      order:
+        - {name: Iced Coffee, size: M}
+        - {name: Brownie}
+
+- category: compound_difficulty
+  brand: Netherby Roasters
+  menu: |
+    Latte | S,M,L | 3.30/3.90/4.50 | in stock
+    Matcha Latte | M,L | 4.35/4.95 | OUT OF STOCK
+    Chai Latte | M,L | 4.00/4.60 | in stock
+    Cinnamon Roll | - | 3.80 | in stock
+    Extras: honey (+0.50), cinnamon (+0.00)
+    Milk options: whole, oat, soy (+0.50)
+  turns:
+    - user: "medium matcha latte with oat"
+    - assistant: "We're out of matcha today. A chai latte with oat is the
+        nearest — shall I do that?"
+    - user: "ok but large, and add a cinnamon roll"
+    - assistant: "One large chai latte with oat milk and a cinnamon roll."
+      order:
+        - {name: Chai Latte, size: L, milk: oat}
+        - {name: Cinnamon Roll}
+
+- category: compound_difficulty
+  brand: Aldergate Coffee
+  menu: |
+    Cappuccino | S,M,L | 3.45/4.00/4.60 | in stock
+    Espresso | S | 2.50 | in stock
+    Drip Coffee | S,M,L | 2.20/2.60/3.00 | OUT OF STOCK
+    Bagel | - | 2.85 | in stock
+    Extras: extra shot (+0.85), decaf (+0.00)
+    Milk options: whole, almond (+0.50)
+  turns:
+    - user: "two large drip coffees"
+    - assistant: "Drip coffee is out today. I could do large americanos —
+        oh, we don't have those either. Large cappuccinos are the closest.
+        Want two of those?"
+    - user: "make it one, with almond milk"
+    - assistant: "One large cappuccino with almond milk."
+      order:
+        - {name: Cappuccino, size: L, milk: almond}
+
+- category: compound_difficulty
+  brand: Fenwick Brew House
+  menu: |
+    Mocha | S,M,L | 3.70/4.30/4.90 | in stock
+    Hot Chocolate | M,L | 3.55/4.15 | in stock
+    Latte | S,M,L | 3.30/3.90/4.50 | in stock
+    Brownie | - | 3.10 | in stock
+    Extras: caramel syrup (+0.60), extra shot (+0.85)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "a hot chocolate and a mocha, both large"
+    - assistant: "One large hot chocolate and one large mocha — anything else?"
+    - user: "actually drop the mocha, and make the hot chocolate medium"
+    - assistant: "Just the medium hot chocolate then."
+      order:
+        - {name: Hot Chocolate, size: M}
+
+- category: compound_difficulty
+  brand: Skelbrook Coffee
+  menu: |
+    Latte | S,M,L | 3.25/3.85/4.45 | in stock
+    Cortado | S,M | 3.10/3.60 | in stock
+    Almond Croissant | - | 3.55 | in stock
+    Extras: vanilla syrup (+0.55), extra shot (+0.80)
+    Milk options: whole, oat, soy (+0.50)
+  turns:
+    - user: "a cortado, large, with soy"
+    - assistant: "Cortados come in small or medium only. Medium with soy?"
+    - user: "sure, and add an extra shot"
+    - assistant: "One medium cortado with soy milk and an extra shot."
+      order:
+        - {name: Cortado, size: M, milk: soy, extras: [extra shot]}
+
+- category: long_dialogue
+  brand: Portbury Coffee Bar
+  menu: |
+    Latte | S,M,L | 3.30/3.90/4.50 | in stock
+    Drip Coffee | S,M,L | 2.15/2.55/2.95 | in stock
+    Blueberry Muffin | - | 3.30 | in stock
+    Brownie | - | 3.05 | in stock
+    Extras: vanilla syrup (+0.55), extra shot (+0.85)
+    Milk options: whole, oat, soy (+0.50)
+  turns:
+    - user: "hey, do you do oat milk?"
+    - assistant: "We do — it's an extra 0.50. What can I get you?"
+    - user: "a latte then"
+    - assistant: "What size — small, medium, or large?"
+    - user: "medium. with oat"
+    - assistant: "One medium latte with oat milk. Anything else?"
+    - user: "yeah a muffin. and actually add a shot to the latte"
+    - assistant: "One medium oat latte with an extra shot, plus a blueberry muffin."
+      order:
+        - {name: Latte, size: M, milk: oat, extras: [extra shot]}
+        - {name: Blueberry Muffin}
+
+- category: long_dialogue
+  brand: Chalkwell Roasters
+  menu: |
+    Cappuccino | S,M,L | 3.40/3.95/4.55 | in stock
+    Cold Brew | M,L | 4.10/4.70 | in stock
+    Cheese Scone | - | 3.30 | in stock
+    Extras: caramel syrup (+0.60)
+    Milk options: whole, almond (+0.45)
+  turns:
+    - user: "how much is a large cold brew?"
+    - assistant: "A large cold brew is 4.70. Want one?"
+    - user: "hmm. and the cappuccino?"
+    - assistant: "3.40 small, 3.95 medium, 4.55 large. Shall I put something in?"
+    - user: "medium cappuccino then"
+    - assistant: "One medium cappuccino — anything with it?"
+    - user: "a scone, thanks"
+    - assistant: "One medium cappuccino and a cheese scone."
+      order:
+        - {name: Cappuccino, size: M}
+        - {name: Cheese Scone}
+
+- category: long_dialogue
+  brand: Ivybridge Coffee
+  menu: |
+    Flat White | S,M,L | 3.35/3.95/4.55 | in stock
+    Mocha | S,M,L | 3.70/4.30/4.90 | in stock
+    Iced Tea | M,L | 2.85/3.35 | in stock
+    Brownie | - | 3.05 | in stock
+    Extras: vanilla syrup (+0.55), extra shot (+0.85)
+    Milk options: whole, oat, soy (+0.50)
+  turns:
+    - user: "two flat whites"
+    - assistant: "What size for those?"
+    - user: "one small one large"
+    - assistant: "A small and a large flat white. Anything else?"
+    - user: "an iced tea, medium"
+    - assistant: "Adding a medium iced tea. That everything?"
+    - user: "yes"
+    - assistant: "A small flat white, a large flat white, and a medium iced tea."
+      order:
+        - {name: Flat White, size: S}
+        - {name: Flat White, size: L}
+        - {name: Iced Tea, size: M}
+
+- category: long_dialogue
+  brand: Rushmere Coffee Co.
+  menu: |
+    Latte | S,M,L | 3.30/3.90/4.50 | in stock
+    Hot Chocolate | M,L | 3.50/4.10 | in stock
+    Butter Croissant | - | 2.95 | in stock
+    Extras: caramel syrup (+0.60), cinnamon (+0.00)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "is the hot chocolate any good?"
+    - assistant: "It's a favourite here. Medium or large?"
+    - user: "what else have you got"
+    - assistant: "Lattes, and butter croissants if you want something to eat."
+    - user: "fine, large hot chocolate with caramel"
+    - assistant: "One large hot chocolate with caramel syrup. Anything else?"
+    - user: "no that's it"
+    - assistant: "One large hot chocolate with caramel syrup."
+      order:
+        - {name: Hot Chocolate, size: L, extras: [caramel syrup]}
+
+- category: off_menu_pressure
+  brand: Belhaven Coffee
+  menu: |
+    Latte | S,M,L | 3.30/3.90/4.50 | in stock
+    Cold Brew | M,L | 4.10/4.70 | in stock
+    Brownie | - | 3.05 | in stock
+    Extras: vanilla syrup (+0.55)
+    Milk options: whole, oat (+0.50)
+  turns:
+    - user: "one caramel macchiato"
+    - assistant: "We don't make that one. A latte with vanilla syrup is the
+        closest we've got — interested?"
+    - user: "come on, you must be able to do it"
+    - assistant: "Afraid not — caramel isn't something we stock. The latte with
+        vanilla is genuinely the nearest thing."
+  expects_order: false
+
+- category: off_menu_pressure
+  brand: Wrenfield Roasters
+  menu: |
+    Cappuccino | S,M,L | 3.45/4.00/4.60 | in stock
+    Green Tea | M | 2.65 | in stock
+    Bagel | - | 2.90 | in stock
+    Extras: honey (+0.50)
+    Milk options: whole, soy (+0.45)
+  turns:
+    - user: "do you have any sandwiches?"
+    - assistant: "Just bagels on the food side, sorry. Want one?"
+    - user: "can you put something in the bagel?"
+    - assistant: "We serve them plain only. I can add a bagel to your order if
+        you'd like it as-is."
+  expects_order: false
+
+- category: off_menu_pressure
+  brand: Ordsall Coffee House
+  menu: |
+    Drip Coffee | S,M,L | 2.20/2.60/3.00 | in stock
+    Espresso | S | 2.50 | in stock
+    Cinnamon Roll | - | 3.80 | in stock
+    Extras: decaf (+0.00), extra shot (+0.85)
+    Milk options: whole (+0.00)
+  turns:
+    - user: "large latte with oat milk"
+    - assistant: "We don't do lattes here, and whole milk is all we carry. A
+        large drip coffee is what I'd suggest — want one?"
+    - user: "no latte at all? seriously?"
+    - assistant: "Seriously — we're a filter and espresso shop. Large drip
+        coffee if you want something long, espresso if you want it short."
+  expects_order: false

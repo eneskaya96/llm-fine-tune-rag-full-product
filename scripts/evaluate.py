@@ -63,20 +63,32 @@ def reference_items(record):
     return [i for c in calls for i in c.get("arguments", {}).get("items", [])]
 
 
+def expects_order(record):
+    """Whether a correct answer places an order.
+
+    The hard set states this per record, since cases like an ambiguous product
+    name or an unavailable size call for a question rather than an order and
+    cannot be read off the category alone.
+    """
+    meta = record["meta"]
+    if "expects_order" in meta:
+        return meta["expects_order"]
+    return meta["category"] not in NO_ORDER
+
+
 def score_one(record, output):
     """Return a dict of pass/fail flags for one generated turn."""
-    category = record["meta"]["category"]
     menu = parse_menu(record["messages"][0]["content"])
     calls, malformed = extract_tool_calls(output)
     items = [i for c in calls if c.get("name") == "create_order"
              for i in c.get("arguments", {}).get("items", [])]
 
-    should_order = category not in NO_ORDER
+    should_order = expects_order(record)
     # grounded and valid_slots are None when no order was emitted: a model that
     # never orders anything would otherwise score 100% on both.
     result = {
         "format_ok": malformed == 0 and (bool(items) if should_order else True),
-        "restraint": not items if category in NO_ORDER else True,
+        "restraint": not items if not should_order else True,
         "grounded": True if items else None,
         "valid_slots": True if items else None,
         "exact_match": False,

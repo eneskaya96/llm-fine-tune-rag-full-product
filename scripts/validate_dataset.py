@@ -148,11 +148,14 @@ def check_record(record, index):
                 if not isinstance(quantity, int) or quantity < 1:
                     problems.append(f"{entry.get('name')!r} bad quantity {quantity!r}")
 
-    # 7. restraint
-    if category in NO_ORDER_CATEGORIES and ordered_any:
-        problems.append(f"category '{category}' should emit no tool call")
-    if category not in NO_ORDER_CATEGORIES and not ordered_any:
-        problems.append(f"category '{category}' emitted no tool call")
+    # 7. restraint -- the hard set states this per record, since an ambiguous
+    # product name or an unavailable size calls for a question, not an order.
+    meta = record.get("meta", {})
+    should_order = meta.get("expects_order", category not in NO_ORDER_CATEGORIES)
+    if not should_order and ordered_any:
+        problems.append(f"'{category}' should emit no tool call")
+    if should_order and not ordered_any:
+        problems.append(f"'{category}' emitted no tool call")
 
     return problems
 
