@@ -126,7 +126,7 @@ family_neighbours:
 categories:
 
   simple_order:
-    share: 0.225
+    share: 0.18
     user:
       - "Hey, can I get {ad} please?"
       - "One {d}, thanks."
@@ -143,7 +143,7 @@ categories:
       - "Perfect, one {d}."
 
   clarify_missing_size:
-    share: 0.1375
+    share: 0.11
     user:
       - "I'd like {ad}."
       - "Can I get {ad}?"
@@ -166,7 +166,7 @@ categories:
       - "Got it — one {d}."
 
   multi_item:
-    share: 0.1375
+    share: 0.11
     user:
       - "{J}, please."
       - "Can I get {j}?"
@@ -179,7 +179,7 @@ categories:
       - "That's {j}."
 
   out_of_stock:
-    share: 0.125
+    share: 0.10
     user:
       - "One {d}, please."
       - "Can I get {ad}?"
@@ -200,7 +200,7 @@ categories:
       - "Done, one {alt}."
 
   off_menu_request:
-    share: 0.1125
+    share: 0.09
     user:
       - "Do you have {aw}?"
       - "Can I get {aw}?"
@@ -219,7 +219,7 @@ categories:
       - "Sorry, we don't make that here. The {n} are what I'd suggest — want one?"
 
   order_correction:
-    share: 0.1125
+    share: 0.09
     user:
       - "{Ad} please."
       - "Can I have {ad}?"
@@ -238,7 +238,7 @@ categories:
       - "Updated: {ad} and {a2}."
 
   price_question_no_order:
-    share: 0.0875
+    share: 0.07
     user:
       - "How much is {ad}?"
       - "What does {ad} cost?"
@@ -250,7 +250,7 @@ categories:
       - "{p} for {ad}. Would you like one?"
 
   customisation:
-    share: 0.0625
+    share: 0.05
     user:
       - "{D}, please."
       - "Can I get {ad}?"
@@ -259,3 +259,84 @@ categories:
       - "One {d}."
       - "Coming up — one {d}."
       - "Sure, one {d}."
+
+  # The three categories below teach the model to stop and ask. Without them it
+  # orders on every turn: run 001 scored 33% on invalid sizes and 50% on
+  # ambiguous names, writing sizes the menu never offered.
+
+  invalid_size:
+    share: 0.07
+    user:
+      - "{Size} {d} please."
+      - "Can I get a {size} {d}?"
+      - "A {size} {d}."
+      - "I'll take a {size} {d}."
+      - "One {size} {d}."
+    refuse:
+      - "{D} comes in {offered} only — {closest} is the closest. Want that?"
+      - "We only pour {offered} for the {d}. Shall I make it {closest}?"
+      - "{Offered} are the only sizes we do for that one. {Closest} instead?"
+      - "No {size} on the {d}, sorry — {offered} only. {Closest}?"
+    accept:
+      - "Yeah, that's fine."
+      - "Sure, go ahead."
+      - "Okay then."
+      - "That works."
+    close:
+      - "One {full}."
+      - "Perfect — one {full}."
+      - "Done, one {full}."
+
+  ambiguous_match:
+    share: 0.07
+    user:
+      - "A {word} please."
+      - "Can I get a {word}?"
+      - "One {word}."
+      - "{Word}, thanks."
+      - "I'll have a {word}."
+    clarify:
+      - "Which one — {options}?"
+      - "We do {options}. Which would you like?"
+      - "{Options} — which were you after?"
+      - "Sure — {options}?"
+    pick:
+      - "The {choice}."
+      - "{Choice} please."
+      - "{Choice}."
+    close:
+      - "One {full}."
+      - "Got it — one {full}."
+      - "Perfect, one {full}."
+
+  vague_request:
+    share: 0.06
+    # Each trait names the drink family that genuinely satisfies it, so the
+    # suggestion is relevant rather than whatever is on the menu.
+    traits:
+      - {ask: "something cold", family: cold}
+      - {ask: "something iced", family: cold}
+      - {ask: "something strong", family: espresso}
+      - {ask: "something with a kick", family: espresso}
+      - {ask: "something sweet", family: sweet}
+      - {ask: "something warm and not too bitter", family: sweet}
+      - {ask: "something without caffeine", family: tea}
+      - {ask: "something light", family: tea}
+      - {ask: "just plain coffee", family: hot_brew}
+      - {ask: "something a bit different", family: flavoured}
+    user:
+      - "Got {ask}?"
+      - "I want {ask}."
+      - "{Ask}, if you have it."
+      - "Do you do {ask}?"
+      - "Looking for {ask}."
+    suggest_one:
+      - "{Options} would fit. Want one?"
+      - "I'd point you at our {options}. Shall I put one in?"
+      - "We've got {options} — sound good?"
+      - "{Options} is what I'd suggest. Interested?"
+    suggest_many:
+      - "{Options} would fit. Which sounds better?"
+      - "I'd point you at {options}. Either work?"
+      - "We've got {options} — which one?"
+      - "{Options}. Shall I put one in?"

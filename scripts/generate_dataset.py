@@ -92,7 +92,7 @@ def make_menu(rng, tpl):
     groups = tpl["drinks"]
     drinks = (rng.sample(groups["espresso_group"], rng.randint(2, 4))
               + rng.sample(groups["brew_group"], rng.randint(1, 2))
-              + rng.sample(groups["other_group"], rng.randint(1, 2)))
+              + rng.sample(groups["other_group"], rng.randint(1, 3)))
     rng.shuffle(drinks)
 
     food = rng.sample(tpl["food"], rng.randint(1, 3))
@@ -320,7 +320,108 @@ def customisation(rng, menu, cat):
     ]
 
 
+SIZE_ORDER = ["S", "M", "L"]
+
+
+def invalid_size(rng, menu, cat):
+    """Customer asks for a size the product does not come in."""
+    pool = [d for d in available(menu) if len(d["sizes"]) < 3]
+    if not pool:
+        return None
+    drink = rng.choice(pool)
+    absent = [s for s in SIZE_ORDER if s not in drink["sizes"]]
+
+    if absent and rng.random() > 0.25:
+        asked_word = SIZE_WORD[rng.choice(absent)]
+        asked_rank = SIZE_ORDER.index(next(s for s in absent
+                                           if SIZE_WORD[s] == asked_word))
+    else:
+        asked_word, asked_rank = "extra large", len(SIZE_ORDER)
+
+    closest = min(drink["sizes"], key=lambda s: abs(SIZE_ORDER.index(s) - asked_rank))
+    offered = " and ".join(SIZE_WORD[s] for s in drink["sizes"])
+    name = drink["name"].lower()
+    full = describe(drink["name"], closest)
+
+    turns = [
+        ("user", fill(rng, cat["user"], size=asked_word, d=name)),
+        say(fill(rng, cat["refuse"], d=name, size=asked_word,
+                 offered=offered, closest=SIZE_WORD[closest])),
+    ]
+    # Half stop at the refusal, half carry through to the corrected order, so
+    # the model does not learn that this shape always ends in a tool call.
+    if rng.random() < 0.5:
+        turns += [
+            ("user", rng.choice(cat["accept"])),
+            say(fill(rng, cat["close"], full=full),
+                [item(drink["name"], size=closest)]),
+        ]
+    return turns
+
+
+def ambiguous_match(rng, menu, cat):
+    """Customer names a word that matches several products on this menu."""
+    pool = available(menu)
+    exact = {d["name"].lower() for d in pool}
+
+    groups = {}
+    for drink in pool:
+        groups.setdefault(drink["name"].split()[-1].lower(), []).append(drink)
+    # Two exclusions. A word that is itself a product is not ambiguous: "latte"
+    # is unambiguous when a plain Latte is listed. And the offer must be
+    # complete -- if the menu holds another drink of the same family whose name
+    # lacks the word (Earl Grey alongside Green Tea and Iced Tea), listing only
+    # the name matches teaches the model to leave options out.
+    options = []
+    for word, group in groups.items():
+        if len(group) < 2 or word in exact:
+            continue
+        families = {d["family"] for d in group}
+        if any(d["family"] in families and d not in group for d in pool):
+            continue
+        options.append((word, group))
+    if not options:
+        return None
+
+    word, group = rng.choice(options)
+    listed = ", ".join(d["name"].lower() for d in group[:-1]) + \
+        " or " + group[-1]["name"].lower()
+
+    turns = [
+        ("user", fill(rng, cat["user"], word=word)),
+        say(fill(rng, cat["clarify"], options=listed)),
+    ]
+    if rng.random() < 0.5:
+        chosen = rng.choice(group)
+        size = rng.choice(chosen["sizes"])
+        full = describe(chosen["name"], size)
+        turns += [
+            ("user", fill(rng, cat["pick"], choice=chosen["name"].lower())),
+            say(fill(rng, cat["close"], full=full),
+                [item(chosen["name"], size=size)]),
+        ]
+    return turns
+
+
+def vague_request(rng, menu, cat):
+    """Customer describes what they want rather than naming it. No order."""
+    trait = rng.choice(cat["traits"])
+    matches = [d for d in available(menu) if d["family"] == trait["family"]]
+    if not matches:
+        return None
+    picks = rng.sample(matches, min(2, len(matches)))
+    listed = " or ".join(d["name"].lower() for d in picks)
+    key = "suggest_one" if len(picks) == 1 else "suggest_many"
+    return [
+        ("user", fill(rng, cat["user"], ask=trait["ask"])),
+        say(fill(rng, cat[key], options=listed)),
+    ]
+
+
 BUILDERS = {
+    "invalid_size": invalid_size,
+    "ambiguous_match": ambiguous_match,
+    "vague_request": vague_request,
     "simple_order": simple_order,
     "clarify_missing_size": clarify_missing_size,
     "multi_item": multi_item,
@@ -347,8 +448,14 @@ def build_record(rng, name, tpl):
     messages = [{"role": "system",
                  "content": tpl["system_prompt"].format(brand=brand, menu=menu_text)}]
     messages += [{"role": role, "content": content} for role, content in turns]
+
+    # Per record, not per category: invalid_size and ambiguous_match end either
+    # at the question or at the corrected order, depending on the draw.
+    ends_in_order = "<tool_call>" in messages[-1]["content"]
+
     return {"messages": messages,
-            "meta": {"category": name, "brand": brand, "voice": tpl["voice"]}}
+            "meta": {"category": name, "brand": brand, "voice": tpl["voice"],
+                     "expects_order": ends_in_order}}
 
 
 def fingerprint(record):

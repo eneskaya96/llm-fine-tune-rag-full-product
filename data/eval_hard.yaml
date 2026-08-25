@@ -322,18 +322,20 @@
     - assistant: "We have iced coffee and iced tea — which did you mean?"
   expects_order: false
 
+# No plain "Latte" on this menu: with one present, answering "latte" with it is
+# an exact match, not a guess, and the example would test nothing.
 - category: ambiguous_match
   brand: Stillwater Coffee House
   menu: |
-    Latte | S,M,L | 3.30/3.90/4.50 | in stock
     Chai Latte | M,L | 4.00/4.60 | in stock
     Matcha Latte | M,L | 4.40/5.00 | in stock
+    Turmeric Latte | M,L | 4.20/4.80 | in stock
     Almond Croissant | - | 3.55 | in stock
     Extras: honey (+0.50)
     Milk options: whole, oat (+0.50)
   turns:
     - user: "one latte, medium"
-    - assistant: "Regular latte, or chai or matcha? We do all three."
+    - assistant: "Chai, matcha, or turmeric? Those are the lattes we pour."
   expects_order: false
 
 - category: ambiguous_match
