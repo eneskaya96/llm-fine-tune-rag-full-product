@@ -458,6 +458,21 @@ def build_record(rng, name, tpl):
                      "expects_order": ends_in_order}}
 
 
+def load_templates(path):
+    """A voice file plus the shared product vocabulary beside it.
+
+    Voices hold only what they say; the menu lives once in _shared.yaml so a new
+    voice never re-lists it. Keys in the voice file win on collision.
+    """
+    path = pathlib.Path(path)
+    voice = yaml.safe_load(path.read_text(encoding="utf-8"))
+    shared_path = path.parent / "_shared.yaml"
+    if not shared_path.exists():
+        return voice
+    shared = yaml.safe_load(shared_path.read_text(encoding="utf-8"))
+    return {**shared, **voice}
+
+
 def fingerprint(record):
     """Dedup over the conversation only -- menus are near-unique by design."""
     body = "|".join(m["content"] for m in record["messages"][1:])
@@ -498,7 +513,7 @@ def main():
                         help="existing jsonl whose dialogues must not reappear")
     args = parser.parse_args()
 
-    tpl = yaml.safe_load(pathlib.Path(args.templates).read_text(encoding="utf-8"))
+    tpl = load_templates(args.templates)
 
     exclude = set()
     for path in args.exclude:

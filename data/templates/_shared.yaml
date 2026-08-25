@@ -1,0 +1,96 @@
+# Product vocabulary shared by every brand voice.
+#
+# Merged under each voice file by scripts/generate_dataset.py, so adding a
+# voice means writing phrasing only -- never re-listing the menu.
+# --------------------------------------------------------------------------
+# Vocabulary: recombined into a fresh brand and menu for every example, so no
+# product catalog is stable across the corpus.
+# --------------------------------------------------------------------------
+
+brand:
+  head: [Copper, Blue, Willow, Harbor, Stone, Marigold, Ashfield, Northgate,
+         Ember, Cedar, Iron, Golden, Rustic, Wild, Corner, River, Maple, Birch,
+         Hollow, Amber, Slate, Juniper, Thistle, Fern, Larkspur, Quiet, Bright,
+         Old Town, Westbrook, Halden, Rowan, Alder, Merrow, Kestrel]
+  tail: [Kettle, Lantern, Bean, Crow, Fox, Owl, Mill, Lane, Anchor, Ridge,
+         Grove, Hill, Press, Barrel, Sparrow, Wren, Post, Stone, Bridge, Gate,
+         Well, Hearth]
+  suffix: [Coffee, Coffee Co., Roasters, Cafe, Coffee Bar, Brew House,
+           Coffee House, Espresso Bar, Coffee Roasters]
+
+# floor = price of the smallest size before per-brand jitter.
+# family = what a customer accepts as a substitute (see family_neighbours).
+drinks:
+  espresso_group:
+    - {name: Latte,       sizes: [S, M, L], floor: 3.0, family: espresso}
+    - {name: Cappuccino,  sizes: [S, M, L], floor: 3.1, family: espresso}
+    - {name: Flat White,  sizes: [S, M, L], floor: 3.0, family: espresso}
+    - {name: Americano,   sizes: [S, M, L], floor: 2.6, family: espresso}
+    - {name: Cortado,     sizes: [S, M],    floor: 2.9, family: espresso}
+    - {name: Macchiato,   sizes: [S, M],    floor: 2.9, family: espresso}
+    - {name: Espresso,    sizes: [S],       floor: 2.2, family: espresso}
+    - {name: Doppio,      sizes: [S],       floor: 2.7, family: espresso}
+    - {name: Piccolo,     sizes: [S],       floor: 2.8, family: espresso}
+    - {name: Long Black,  sizes: [M, L],    floor: 3.0, family: espresso}
+    - {name: Mocha,       sizes: [S, M, L], floor: 3.5, family: sweet}
+  brew_group:
+    - {name: Drip Coffee,     sizes: [S, M, L], floor: 2.0, family: hot_brew}
+    - {name: Pour Over,       sizes: [M, L],    floor: 3.4, family: hot_brew}
+    - {name: French Press,    sizes: [M, L],    floor: 3.6, family: hot_brew}
+    - {name: Cold Brew,       sizes: [M, L],    floor: 3.8, family: cold}
+    - {name: Nitro Cold Brew, sizes: [M, L],    floor: 4.4, family: cold}
+    - {name: Iced Coffee,     sizes: [M, L],    floor: 3.2, family: cold}
+  other_group:
+    - {name: Chai Latte,     sizes: [M, L], floor: 3.8, family: flavoured}
+    - {name: Matcha Latte,   sizes: [M, L], floor: 4.2, family: flavoured}
+    - {name: Turmeric Latte, sizes: [M, L], floor: 4.0, family: flavoured}
+    - {name: London Fog,     sizes: [M, L], floor: 3.9, family: flavoured}
+    - {name: Hot Chocolate,  sizes: [M, L], floor: 3.4, family: sweet}
+    - {name: Iced Tea,       sizes: [M, L], floor: 2.7, family: cold}
+    - {name: Herbal Tea,     sizes: [M],    floor: 2.7, family: tea}
+    - {name: Green Tea,      sizes: [M],    floor: 2.6, family: tea}
+    - {name: Earl Grey,      sizes: [M],    floor: 2.6, family: tea}
+
+food:
+  - {name: Almond Croissant,      floor: 3.5}
+  - {name: Butter Croissant,      floor: 2.9}
+  - {name: Pain au Chocolat,      floor: 3.6}
+  - {name: Banana Bread,          floor: 3.1}
+  - {name: Blueberry Muffin,      floor: 3.2}
+  - {name: Lemon Poppy Muffin,    floor: 3.3}
+  - {name: Cinnamon Roll,         floor: 3.8}
+  - {name: Chocolate Chip Cookie, floor: 2.4}
+  - {name: Sesame Bagel,          floor: 2.8}
+  - {name: Avocado Toast,         floor: 6.2}
+  - {name: Granola Bowl,          floor: 5.4}
+  - {name: Brownie,               floor: 3.0}
+  - {name: Cheese Scone,          floor: 3.4}
+
+milks: [whole, oat, soy, almond, coconut, skim]
+extras: [extra shot, vanilla syrup, caramel syrup, hazelnut syrup, decaf,
+         extra hot, cinnamon, honey]
+
+# Never present on a generated menu. `family` picks a sensible counter-offer.
+off_menu:
+  - {name: pumpkin spice frappuccino, family: sweet}
+  - {name: caramel frappuccino,       family: sweet}
+  - {name: frozen hot chocolate,      family: sweet}
+  - {name: milkshake,                 family: sweet}
+  - {name: affogato float,            family: sweet}
+  - {name: bubble tea,                family: cold}
+  - {name: mango smoothie,            family: cold}
+  - {name: protein shake,             family: cold}
+  - {name: energy drink,              family: cold}
+  - {name: boba coffee,               family: cold}
+  - {name: iced matcha frappe,        family: flavoured}
+  - {name: espresso martini,          family: espresso}
+
+# Acceptable substitutes in order of preference. Without this the generator
+# offers a hot espresso to someone who asked for iced coffee.
+family_neighbours:
+  espresso:  [espresso, hot_brew, sweet]
+  hot_brew:  [hot_brew, espresso, cold]
+  cold:      [cold, hot_brew, espresso]
+  sweet:     [sweet, flavoured, espresso]
+  flavoured: [flavoured, sweet, tea]
+  tea:       [tea, flavoured, hot_brew]
