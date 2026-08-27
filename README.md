@@ -5,8 +5,10 @@ brand voice from an admin panel; the same base model serves all of them, with
 LoRA adapters swapped at runtime. Product facts come from retrieval, never from
 the model's weights.
 
-**Status:** fine-tuning done and measured, two adapters published. RAG,
-serving, and frontend not built yet.
+**Status:** fine-tuning done and measured, two adapters published and running
+live on a Space. RAG and frontend not built yet.
+
+**Live demo:** [one base model, two voices, swapped per request](https://huggingface.co/spaces/eneskaya96/coffee-order-voice-swap)
 
 ## The architecture, and why it splits this way
 
@@ -41,6 +43,10 @@ runtime swap the admin panel depends on:
 Production would run vLLM with `--enable-lora`. The live demo runs Hugging Face
 Spaces on ZeroGPU with `peft`, where `model.set_adapter("blunt")` is the whole
 of the swap. Same adapter files, different loader.
+
+Measured on the served stack: **14–17 ms** per swap, and the hard-set scores
+move by at most one example against the 4-bit numbers the adapters were trained
+and measured on — see [`serving-check.md`](finetuning/results/serving-check.md).
 
 ## Repository
 
@@ -78,6 +84,12 @@ model beat a well-prompted one while using a shorter prompt?
 Every metric is computed in code against that example's own menu. No LLM judge,
 no human rating.
 
+Tone is scored separately, since `exact_match` compares order items and the two
+voices are meant to agree on those. A cross-validated classifier tells the two
+adapters' prose apart **81.1% ± 7.7%** of the time from identical prompts (50%
+would be indistinguishable), driven mostly by politeness markers — 0.46 per
+turn in friendly against 0.03 in blunt.
+
 Three runs, each fixing what the last one measured:
 
 | | hard-set exact_match | what changed |
@@ -97,11 +109,15 @@ regressions.
   confidence intervals on any single category. Both adapters diverge by up to 40
   points per category while landing within one example of each other overall —
   most of that spread is sampling noise.
-- **Tone is not measured.** `exact_match` compares order items, not prose. The
-  scorer for that exists (`finetuning/scripts/tone_eval.py`) but has not been
-  run against real generations.
+- **The tone number does not prove brand fit.** 81.1% says the two adapters
+  produce different prose, not that either sounds like a company a person would
+  recognise. With template-generated training data the classifier may be
+  separating memorised phrasings rather than a learned style.
 - **Training dialogues are template-generated.** The hard set is hand-written to
   compensate, but the corpus does not have the variety of real transcripts.
+- **Comparative sizes are thinly taught.** "The big one" is 2.9% of the corpus
+  and neither voice handles it reliably; blunt misses one of the two hard-set
+  cases.
 - **No RAG layer yet**, so retrieval quality is untested end to end. The
   `<menu>` block is currently hand-assembled in the training data.
 
@@ -109,7 +125,8 @@ regressions.
 
 1. `rag/` — Ember & Oak catalog, ChromaDB index, retrieval that emits the exact
    `<menu>` format the model was trained on
-2. `serving/` — HF Space, both adapters resident, tool-call execution
+2. `serving/` — order execution and a cart on top of the Space that already
+   swaps voices
 3. `frontend/` — React on Vercel, admin panel wired to the adapter swap
 
 See [`finetuning/README.md`](finetuning/README.md) for how the data and the

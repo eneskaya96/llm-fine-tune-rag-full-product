@@ -29,6 +29,12 @@ the baseline gets it.
 Across three runs: 81.1% → 86.5% → 91.9%. Each run's write-up in
 [`results/`](results/) records what changed, what it fixed, and what it broke.
 
+Re-measured on the stack the Space actually runs — unquantised weights, plain
+`peft`, no Unsloth — every metric lands within one or two examples of the table
+above, and the voice swap costs 14–17 ms. Tone scores 81.1% discriminability
+there, the first measurement of it.
+[`results/serving-check.md`](results/serving-check.md).
+
 ## Layout
 
 ```
@@ -104,8 +110,11 @@ of whether tone transferred rather than behaviour.
   answer moves a category by 20-33 points. Both adapters diverge by up to 40
   points per category while landing within one example of each other overall —
   most of that spread is noise. Read the overall figure as the result.
-- **Tone is not scored yet.** `tone_eval.py` exists but has not been run against
-  real generations; the tables above say nothing about whether either adapter
-  sounds like its brand.
+- **The tone number is a difference, not a verdict.** 81.1% discriminability
+  proves the voices produce different prose from the same prompts. Whether
+  either sounds like a real brand is still judged by eye.
 - **Customer turns are template-generated**, so they lack the variety of real
   transcripts even after the hard set's hand-written cases.
+- **Comparative sizing is undertaught.** 26 of 900 dialogues cover "the big
+  one", identically in both voices, and neither handles it reliably. Raising
+  that share needs more hard-set cases first, or a fix cannot be told from luck.
