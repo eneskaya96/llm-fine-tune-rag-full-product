@@ -81,16 +81,23 @@ Milk options: whole, skim, oat, almond (+0.50)"""
 
 tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
 model = AutoModelForCausalLM.from_pretrained(
-    BASE_WEIGHTS, torch_dtype=torch.bfloat16, device_map="cuda"
+    BASE_WEIGHTS, dtype=torch.bfloat16, device_map="cuda"
 )
+
+# torch_device="cpu" is load-bearing on ZeroGPU. There is no GPU at startup --
+# spaces intercepts torch calls and replays them once a @spaces.GPU function
+# runs -- but peft reads adapter files through safetensors, which asks CUDA for
+# memory directly and so never reaches the interception. Reading them onto CPU
+# hands the weights back to torch, which does get intercepted.
+LOAD = {"torch_device": "cpu"}
 
 # from_pretrained attaches the first adapter and turns the plain model into a
 # PeftModel; load_adapter stacks the rest alongside it. All of them sit in VRAM
 # at once -- roughly 130 MB each against the base model's 8 GB.
 (first_name, first_repo), *rest = ADAPTERS.items()
-model = PeftModel.from_pretrained(model, first_repo, adapter_name=first_name)
+model = PeftModel.from_pretrained(model, first_repo, adapter_name=first_name, **LOAD)
 for name, repo in rest:
-    model.load_adapter(repo, adapter_name=name)
+    model.load_adapter(repo, adapter_name=name, **LOAD)
 model.eval()
 
 # set_adapter mutates one shared object, so two concurrent requests would fight
