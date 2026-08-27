@@ -31,9 +31,9 @@ Across three runs: 81.1% → 86.5% → 91.9%. Each run's write-up in
 
 Re-measured on the stack the Space actually runs — unquantised weights, plain
 `peft`, no Unsloth — every metric lands within one or two examples of the table
-above, and the voice swap costs 14–17 ms. Tone scores 81.1% discriminability
-there, the first measurement of it.
-[`results/serving-check.md`](results/serving-check.md).
+above, and the voice swap costs 14–17 ms. The tone measurement from the same
+run turned out confounded and is not a result;
+[`results/serving-check.md`](results/serving-check.md) says why.
 
 ## Layout
 
@@ -110,9 +110,12 @@ of whether tone transferred rather than behaviour.
   answer moves a category by 20-33 points. Both adapters diverge by up to 40
   points per category while landing within one example of each other overall —
   most of that spread is noise. Read the overall figure as the result.
-- **The tone number is a difference, not a verdict.** 81.1% discriminability
-  proves the voices produce different prose from the same prompts. Whether
-  either sounds like a real brand is still judged by eye.
+- **The voices differ in their system prompt, not only their weights.** That
+  makes the tone score uninterpretable — a base model would follow "Be blunt.
+  No pleasantries." on its own. The prompt belongs in `_shared.yaml` so every
+  voice is generated against the same one; both adapters need retraining after
+  that. Until then the corpora here match the published adapters rather than
+  the fix.
 - **Customer turns are template-generated**, so they lack the variety of real
   transcripts even after the hard set's hand-written cases.
 - **Comparative sizing is undertaught.** 26 of 900 dialogues cover "the big

@@ -84,17 +84,17 @@ model beat a well-prompted one while using a shorter prompt?
 Every metric is computed in code against that example's own menu. No LLM judge,
 no human rating.
 
-Tone is scored separately, since `exact_match` compares order items and the two
-voices are meant to agree on those. A cross-validated classifier tells the two
-adapters' prose apart **81.1% ± 7.7%** of the time (50% would be
-indistinguishable), driven mostly by politeness markers — 0.46 per turn in
-friendly against 0.03 in blunt.
+**Tone is not among the results.** A classifier separated the two adapters'
+prose 81.1% of the time — but each voice was scored under its own training
+prompt, and those prompts said *"Be warm and concise"* and *"Be blunt. No
+pleasantries."* A base model follows those lines unaided, so the number
+measured the prompts as much as the weights. Serving both adapters one prompt
+that says nothing about tone, the difference largely goes.
 
-That figure was measured with each voice under its own training prompt, which
-included lines like *"Be blunt. No pleasantries."* — instructions a base model
-would follow unaided, so it cannot yet be credited to the adapters. Both the
-demo and the evaluation now send one shared prompt that says nothing about
-tone; the number under it is [pending](finetuning/results/serving-check.md).
+So what fine-tuning is shown to have taught is the tool-call format and the
+ordering discipline — neither of which was ever in the prompt. Teaching tone
+needs a corpus where the voices differ *only* in what the model is trained to
+say. [The write-up](finetuning/results/serving-check.md) has the details.
 
 Three runs, each fixing what the last one measured:
 
@@ -115,10 +115,10 @@ regressions.
   confidence intervals on any single category. Both adapters diverge by up to 40
   points per category while landing within one example of each other overall —
   most of that spread is sampling noise.
-- **The tone number does not prove brand fit.** 81.1% says the two adapters
-  produce different prose, not that either sounds like a company a person would
-  recognise. With template-generated training data the classifier may be
-  separating memorised phrasings rather than a learned style.
+- **Tone is not proven at all.** See above: the voices differed in their system
+  prompt as well as their weights, so the tone score could not be credited to
+  fine-tuning. Fixing it means regenerating the corpus against one shared
+  prompt and retraining both voices.
 - **Training dialogues are template-generated.** The hard set is hand-written to
   compensate, but the corpus does not have the variety of real transcripts.
 - **Comparative sizes are thinly taught.** "The big one" is 2.9% of the corpus

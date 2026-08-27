@@ -93,9 +93,27 @@ Space and `prompt_messages(record, neutral=True)` now use it, and section 6b of
 the notebook re-scores under it. Whatever survives there is the adapter's.
 
 The adapters were trained *with* the tone lines, so this is a shift away from
-what they saw. If the tone collapses, the honest fix is to regenerate the
-corpus against the neutral prompt and retrain — not to put the lines back and
-keep quoting 81.1%.
+what they saw.
+
+**First reading, by eye: the difference largely goes.** Driving the Space by
+hand under the neutral prompt, the two adapters are hard to tell apart. So most
+of the 81.1% was the prompt. What fine-tuning demonstrably taught is the
+tool-call format and the ordering discipline — `format_ok` and `exact_match`
+beat the armed baseline by 22 and 30 points, and those were never in the
+prompt. Tone is not yet among its results.
+
+The design error underneath is worth naming, because it is the kind that
+produces a number rather than an error message: **the variable under test was
+put in the input.** Two voices that differ in their system prompt cannot be
+compared for what their weights learned, since the prompt alone explains the
+difference. Voices must differ only in what the model is trained to say, never
+in what it is given to read.
+
+The fix is a corpus change, not a serving change: the system prompt moves into
+`data/templates/_shared.yaml` so every voice is generated against the same one,
+and both adapters are retrained. Until that happens the published adapters
+still carry the old prompt in their training distribution, so the repo's data
+is left matching them rather than silently drifting ahead.
 
 Beyond the confound: the training dialogues are template-generated, so a
 classifier separating them may be picking out memorised phrasings rather than a
