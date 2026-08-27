@@ -5,8 +5,8 @@ brand voice from an admin panel; the same base model serves all of them, with
 LoRA adapters swapped at runtime. Product facts come from retrieval, never from
 the model's weights.
 
-**Status:** fine-tuning done and measured, two adapters published and running
-live on a Space. RAG and frontend not built yet.
+**Status:** fine-tuning done and measured, two adapters published and serving a
+retrieved menu live on a Space. Order execution and frontend not built yet.
 
 **Live demo:** [one base model, two voices, swapped per request](https://huggingface.co/spaces/eneskaya96/coffee-order-voice-swap)
 
@@ -52,11 +52,17 @@ and measured on — see [`serving-check.md`](finetuning/results/serving-check.md
 
 ```
 finetuning/   data generation, training, evaluation      → Colab (T4)
-rag/          catalog → ChromaDB → <menu> block          → imported by serving
+rag/          catalog → Chroma → <menu> block            → imported by serving
 serving/      base model + adapter hot-swap + API        → HF Space (ZeroGPU)
 frontend/     chat, cart, admin panel                    → Vercel
 shared/       order_schema.json — the contract all three obey
 ```
+
+Retrieval is why the catalog can be 28 products while the model only ever
+reads eight: the adapters were trained on menus of 4-9 drinks and never saw a
+longer one, so [`rag/`](rag/) chooses per turn — keeping anything named earlier
+in the conversation, and leaving sold-out items listed as `OUT OF STOCK` so the
+model can offer the alternative it was trained to offer.
 
 `shared/order_schema.json` is the single source of truth for what an order
 looks like. The training data emits it, the evaluator checks against it, the
@@ -124,16 +130,19 @@ regressions.
 - **Comparative sizes are thinly taught.** "The big one" is 2.9% of the corpus
   and neither voice handles it reliably; blunt misses one of the two hard-set
   cases.
-- **No RAG layer yet**, so retrieval quality is untested end to end. The
-  `<menu>` block is currently hand-assembled in the training data.
+- **Retrieval is not measured.** Over a 28-product catalog, a benchmark would
+  not mean much, so [`rag/`](rag/) carries regression tests rather than a
+  score. Retrieval quality at a catalog size where it would matter is untested.
 
 ## Next
 
-1. `rag/` — Ember & Oak catalog, ChromaDB index, retrieval that emits the exact
-   `<menu>` format the model was trained on
-2. `serving/` — order execution and a cart on top of the Space that already
-   swaps voices
-3. `frontend/` — React on Vercel, admin panel wired to the adapter swap
+1. `serving/` — order execution and a cart on top of the Space that already
+   swaps voices and retrieves its menu
+2. `frontend/` — React on Vercel, admin panel wired to the adapter swap and to
+   the catalog, which is the point at which the catalog leaves git for a real
+   store
+3. Retrain both voices against one shared system prompt, so tone can be
+   measured for what the weights learned rather than what the prompt said
 
 See [`finetuning/README.md`](finetuning/README.md) for how the data and the
 adapters were made.

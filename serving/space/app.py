@@ -1,10 +1,12 @@
-"""Smoke test: does the adapter hot-swap work?
+"""Two trained voices over one base model, reading a retrieved menu.
 
-One question only -- can a single base model answer as both trained voices,
-switching between them per request without a reload? No cart, no order
-execution, no retrieval; those follow once this holds.
+Two questions in one demo. Can a single base model answer as both voices,
+switching per request without a reload -- and does the menu it reads come from
+the catalog rather than from a constant in this file? No cart or order
+execution yet; those follow.
 
-The file is self-contained so this folder uploads to a Space unchanged.
+The file is self-contained apart from `rag/` and `shared/`, which the sync
+workflow copies in beside it.
 """
 
 import pathlib
@@ -16,6 +18,9 @@ import spaces
 import torch
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from rag.src import menu_format
+from rag.src.retrieve import select
 
 # Weights come from Qwen in bf16 -- ZeroGPU has VRAM to spare and skipping the
 # 4-bit quantisation skips bitsandbytes with it. The tokenizer comes from the
@@ -29,6 +34,8 @@ ADAPTERS = {
     "blunt": "eneskaya96/coffee-order-blunt",
 }
 
+SHOP = "ember_and_oak"
+
 # One prompt for both voices, and it says nothing about how to sound. Each
 # adapter was trained under its own -- "Be warm and concise" against "Be blunt.
 # No pleasantries." -- but serving them that way would prove nothing: a base
@@ -37,23 +44,6 @@ ADAPTERS = {
 # the adapter's.
 SYSTEM = (pathlib.Path(__file__).parent / "shared" / "system_prompt.txt").read_text(
     encoding="utf-8")
-
-BRAND = "Ember & Oak"
-
-# Stands in for retrieval output. One item is deliberately out of stock, so the
-# substitution behaviour is visible without having to hunt for it.
-MENU = """Espresso | S | 2.60 | in stock
-Americano | S,M,L | 2.90/3.40/3.90 | in stock
-Flat White | S,M,L | 3.40/3.95/4.50 | in stock
-Latte | S,M,L | 3.30/3.85/4.40 | in stock
-Cold Brew | M,L | 4.10/4.70 | in stock
-Iced Latte | M,L | 4.00/4.60 | OUT OF STOCK
-Chai Latte | M,L | 4.20/4.80 | in stock
-Matcha Latte | M,L | 4.50/5.10 | in stock
-Croissant | - | 3.20 | in stock
-Blueberry Muffin | - | 3.30 | in stock
-Extras: extra shot (+0.80), vanilla syrup (+0.55), oat foam (+0.60)
-Milk options: whole, skim, oat, almond (+0.50)"""
 
 
 tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
@@ -82,12 +72,16 @@ model.eval()
 # would use vLLM, which routes a per-request adapter without shared state.
 _lock = threading.Lock()
 
+# Seed the Chroma collection now rather than on the first request. Costs a
+# couple of seconds at startup and takes them off whoever asks first.
+select(SHOP, "warm up")
 
-def answer(menu, message):
+
+def answer(menu, brand, message):
     """One turn from whichever adapter is active, greedily decoded."""
     prompt = tokenizer.apply_chat_template(
         [
-            {"role": "system", "content": SYSTEM.format(brand=BRAND, menu=menu)},
+            {"role": "system", "content": SYSTEM.format(brand=brand, menu=menu)},
             {"role": "user", "content": message},
         ],
         tokenize=False,
@@ -109,7 +103,7 @@ def answer(menu, message):
 
 
 @spaces.GPU(duration=120)
-def compare(message, menu):
+def generate_both(menu, brand, message):
     """Answer as both voices, reporting what each swap cost."""
     replies, timings = [], []
     with _lock:
@@ -119,28 +113,54 @@ def compare(message, menu):
             swap_ms = (time.perf_counter() - start) * 1000
 
             start = time.perf_counter()
-            replies.append(answer(menu, message))
+            replies.append(answer(menu, brand, message))
             timings.append(f"**{voice}** — swap {swap_ms:.1f} ms, "
                            f"generate {time.perf_counter() - start:.1f} s")
-    return (*replies, "  \n".join(timings))
+    return replies, timings
+
+
+def compare(message, history_text):
+    """Retrieve the menu, then answer from both voices.
+
+    Retrieval runs out here rather than inside generate_both: embedding the
+    query takes a few hundred milliseconds of CPU, and doing that inside a
+    @spaces.GPU call would hold a GPU slot doing no GPU work.
+    """
+    history = [line for line in history_text.splitlines() if line.strip()]
+    history.append(message)
+
+    start = time.perf_counter()
+    shop, products, reasons = select(SHOP, message, history)
+    retrieval_ms = (time.perf_counter() - start) * 1000
+    menu = menu_format.menu_block(products, shop)
+
+    replies, timings = generate_both(menu, shop.brand, message)
+
+    why = "\n".join(f"| {p.name} | {reasons[p.id]} |" for p in products)
+    why = ("| product | why it is on the menu |\n|---|---|\n" + why +
+           f"\n\n{len(products)} of 28 products, chosen in "
+           f"{retrieval_ms:.0f} ms.")
+    return (*replies, "  \n".join(timings), menu, why)
 
 
 EXAMPLES = [
     "large flat white with oat pls",
     "can I get an iced latte",
+    "something cold and refreshing",
+    "do you have anything without milk",
     "two croissants and a medium latte",
-    "a latte please",
-    "no milk in the americano, medium",
 ]
 
 with gr.Blocks(title="Coffee order — voice swap") as demo:
     gr.Markdown(
-        "# One base model, two voices\n"
-        "Both replies below come from the same 4B model in the same process, "
-        "reading the **same system prompt** — one that says nothing about how "
-        "to sound. The only thing that differs is which LoRA adapter is active: "
-        "`model.set_adapter(...)`, no reload. Any difference in tone is in the "
-        "weights."
+        "# One base model, two voices, one retrieved menu\n"
+        "Both replies come from the same 4B model in the same process, reading "
+        "the **same system prompt** — one that says nothing about how to sound. "
+        "The only thing that differs is which LoRA adapter is active: "
+        "`model.set_adapter(...)`, no reload.\n\n"
+        "The menu is not hardcoded. Ember & Oak has **28 products** and the "
+        "adapters were trained on menus of 4–9 drinks, so the RAG layer picks "
+        "what this turn needs. Its working is shown below."
     )
     with gr.Row():
         message = gr.Textbox(label="Customer says", scale=3,
@@ -150,11 +170,24 @@ with gr.Blocks(title="Coffee order — voice swap") as demo:
         friendly_out = gr.Textbox(label="friendly", lines=8)
         blunt_out = gr.Textbox(label="blunt", lines=8)
     timing = gr.Markdown()
-    menu = gr.Textbox(label="Menu (the RAG layer will produce this later)",
-                      value=MENU, lines=13)
+
+    with gr.Accordion("What the model was given to read", open=False):
+        gr.Markdown(
+            "Products named in the conversation stay on the menu even when "
+            "this turn is about something else — otherwise a latte ordered "
+            "three turns ago falls off and the model denies taking it. Add "
+            "earlier turns here to see it hold."
+        )
+        history_box = gr.Textbox(label="Conversation so far (one turn per line)",
+                                 lines=3, placeholder="a latte please")
+        menu_out = gr.Textbox(label="<menu> block, retrieved", lines=12,
+                              interactive=False)
+        why_out = gr.Markdown()
+
     gr.Examples(EXAMPLES, inputs=message)
 
-    run.click(compare, [message, menu], [friendly_out, blunt_out, timing])
-    message.submit(compare, [message, menu], [friendly_out, blunt_out, timing])
+    outputs = [friendly_out, blunt_out, timing, menu_out, why_out]
+    run.click(compare, [message, history_box], outputs)
+    message.submit(compare, [message, history_box], outputs)
 
 demo.queue(max_size=8).launch()

@@ -10,6 +10,11 @@ on:
     branches: [main]
     paths:
       - 'serving/space/**'
+      # The Space runs these too: app.py imports rag.src.retrieve and reads
+      # shared/system_prompt.txt, so a change to either has to reach it.
+      - 'rag/src/**'
+      - 'rag/catalog/**'
+      - 'shared/**'
       - '.github/workflows/sync-space.yml'
   workflow_dispatch:
 
@@ -38,6 +43,13 @@ jobs:
           # never two versions of the same prompt.
           mkdir -p space/shared
           cp shared/system_prompt.txt shared/order_schema.json space/shared/
+          # The RAG layer, minus its tests -- app.py imports rag.src.retrieve
+          # and the catalog seeds Chroma at startup. Copied rather than
+          # duplicated so the Space and the repo are never two catalogs.
+          rm -rf space/rag
+          mkdir -p space/rag
+          cp rag/__init__.py space/rag/
+          cp -r rag/src rag/catalog space/rag/
 
           cd space
           git config user.name  "github-actions[bot]"

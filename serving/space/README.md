@@ -20,9 +20,10 @@ them is which LoRA adapter is active: `model.set_adapter("blunt")`.
   [`coffee-order-blunt`](https://huggingface.co/eneskaya96/coffee-order-blunt)
 - Code: [github.com/eneskaya96/llm-fine-tune-rag-full-product](https://github.com/eneskaya96/llm-fine-tune-rag-full-product)
 
-The menu is editable in the UI and currently hand-written. A retrieval layer
-will produce it later; the model reads it either way, since it was never
-trained on a fixed catalog.
+The menu is retrieved, not hardcoded. Ember & Oak has 28 products and the
+adapters were trained on menus of 4-9 drinks, so `rag/` picks what each turn
+needs and the UI shows why each line is on the list. The model was never
+trained on a fixed catalog, so swapping the catalog serves a different shop.
 
 This file is pushed to the Space by `.github/workflows/sync-space.yml`. Edit it
 here, not there — a Space-side edit is overwritten on the next sync.
