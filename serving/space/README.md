@@ -24,6 +24,5 @@ The menu is editable in the UI and currently hand-written. A retrieval layer
 will produce it later; the model reads it either way, since it was never
 trained on a fixed catalog.
 
-**Keep the `sdk_version` line that the Space creation form wrote into this
-file** — it pins the Gradio the runtime installs. Everything above is safe to
-copy as-is.
+This file is pushed to the Space by `.github/workflows/sync-space.yml`. Edit it
+here, not there — a Space-side edit is overwritten on the next sync.

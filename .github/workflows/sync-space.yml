@@ -1,0 +1,46 @@
+name: Sync Space
+
+# A Hugging Face Space is a git repository, and it expects app.py at its root
+# while this repo keeps it under serving/space/. So the sync is a copy into a
+# clone of the Space rather than a mirror push: contents are replaced, the
+# Space's own history is kept.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'serving/space/**'
+      - '.github/workflows/sync-space.yml'
+  workflow_dispatch:
+
+env:
+  SPACE: eneskaya96/coffee-order-voice-swap
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy serving/space into the Space and push
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "${HF_TOKEN:-}" || { echo "HF_TOKEN secret is not set"; exit 1; }
+
+          git clone "https://oauth:${HF_TOKEN}@huggingface.co/spaces/${SPACE}" space
+          # --delete so a file removed here is removed there; .git is the clone's
+          # own, not ours to overwrite.
+          rsync -a --delete --exclude '.git' serving/space/ space/
+
+          cd space
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Space already matches serving/space -- nothing to push."
+            exit 0
+          fi
+          git commit -m "Sync from ${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7}"
+          git push
