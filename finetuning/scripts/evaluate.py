@@ -14,12 +14,21 @@ exact_match  order items identical to the reference (the strict one)
 """
 
 import json
+import pathlib
 
 from validate_dataset import extract_tool_calls, parse_menu
 
 NO_ORDER = {"off_menu_request", "price_question_no_order"}
 
 
+SCHEMA_PATH = (pathlib.Path(__file__).resolve().parent.parent.parent
+               / "shared" / "order_schema.json")
+
+# The prompt text below is hand-formatted for the model to read, while
+# shared/order_schema.json is the machine-readable contract the serving layer
+# and frontend use. Rewording the prompt changes what the base model is scored
+# against, so the two are kept as separate renderings of one contract and
+# checked for drift at import rather than generated from each other.
 TOOL_SCHEMA = """
 
 You have one tool:
@@ -41,6 +50,21 @@ Call it by writing exactly:
 <tool_call>
 {"name": "create_order", "arguments": {"items": [...]}}
 </tool_call>"""
+
+
+def _check_schema_drift():
+    """Fail loudly if the prompt text and the shared contract disagree."""
+    if not SCHEMA_PATH.exists():
+        return
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    fields = set(schema["parameters"]["properties"]["items"]["items"]["properties"])
+    missing = [f for f in fields if f'"{f}"' not in TOOL_SCHEMA]
+    if missing or schema["name"] not in TOOL_SCHEMA:
+        raise AssertionError(
+            f"TOOL_SCHEMA has drifted from {SCHEMA_PATH.name}: missing {missing}")
+
+
+_check_schema_drift()
 
 
 def prompt_messages(record, tool_schema=False):

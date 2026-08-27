@@ -3,7 +3,7 @@
 The hard set is written by hand in YAML because it is read and edited by hand;
 this turns it into records the scorer already understands.
 
-    python scripts/build_eval_hard.py
+    python finetuning/scripts/build_eval_hard.py
 """
 
 import json

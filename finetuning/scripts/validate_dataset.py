@@ -16,7 +16,7 @@ Checks
 
 Usage
 -----
-    python scripts/validate_dataset.py data/train.jsonl
+    python finetuning/scripts/validate_dataset.py finetuning/data/train_friendly.jsonl
 """
 
 import json
@@ -161,7 +161,8 @@ def check_record(record, index):
 
 
 def main():
-    path = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "data/train.jsonl")
+    default = pathlib.Path(__file__).resolve().parent.parent / "data" / "train_friendly.jsonl"
+    path = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else default
     records = [json.loads(line) for line in path.open(encoding="utf-8")]
 
     failures, total_problems = 0, 0

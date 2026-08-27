@@ -1,9 +1,10 @@
 """Generate the supervised fine-tuning set for the coffee ordering assistant.
 
 All wording -- system prompt, product vocabulary, dialogue phrasing -- lives in
-a templates file (see data/templates/friendly.yaml). This module only supplies
-the structure: how a menu is assembled, what each behaviour category looks like
-as a sequence of turns, and how records are sampled and deduplicated.
+a templates file (see finetuning/data/templates/friendly.yaml). This module
+only supplies the structure: how a menu is assembled, what each behaviour
+category looks like as a sequence of turns, and how records are sampled and
+deduplicated.
 
 That split is what makes a second brand voice cheap: copy the YAML, rewrite the
 phrasing, run with --templates pointing at it. No code changes.
@@ -15,7 +16,7 @@ output will be injected once the RAG layer lands.
 
 Usage
 -----
-    python scripts/generate_dataset.py --n 800 --seed 42 --out data/train.jsonl
+    python finetuning/scripts/generate_dataset.py --n 900 --seed 42
 """
 
 import argparse
@@ -549,12 +550,17 @@ def generate(n, seed, tpl, exclude=()):
     return records
 
 
+DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
+
+
 def main():
+    # Defaults resolve against this file rather than the working directory, so
+    # the script behaves the same from the repo root or from finetuning/.
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n", type=int, default=800)
+    parser.add_argument("--n", type=int, default=900)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--templates", default="data/templates/friendly.yaml")
-    parser.add_argument("--out", default="data/train.jsonl")
+    parser.add_argument("--templates", default=DATA_DIR / "templates" / "friendly.yaml")
+    parser.add_argument("--out", default=DATA_DIR / "train_friendly.jsonl")
     parser.add_argument("--exclude", action="append", default=[],
                         help="existing jsonl whose dialogues must not reappear")
     args = parser.parse_args()
