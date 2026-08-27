@@ -1,0 +1,131 @@
+{
+  "slug": "ember_and_oak",
+  "brand": "Ember & Oak",
+  "milks": ["whole", "skim", "oat", "almond", "soy"],
+  "milk_surcharge": 0.50,
+  "extras": [
+    {"name": "extra shot", "price": 0.80},
+    {"name": "vanilla syrup", "price": 0.55},
+    {"name": "caramel syrup", "price": 0.55},
+    {"name": "oat foam", "price": 0.60},
+    {"name": "decaf", "price": 0.00},
+    {"name": "extra hot", "price": 0.00},
+    {"name": "cinnamon", "price": 0.00}
+  ],
+
+  "_comment": "description is the only field that gets embedded. It carries the words a customer would actually use -- hot, iced, strong, sweet, milky, no milk -- because the product name almost never does. Prices and stock live in metadata and are read fresh at render time, so a price change or a sold-out flag never costs a re-embed.",
+
+  "products": [
+    {"id": "espresso", "name": "Espresso", "kind": "drink",
+     "sizes": ["S"], "prices": [2.60], "in_stock": true,
+     "description": "hot espresso, a single short strong black shot, no milk, small and intense"},
+
+    {"id": "doppio", "name": "Doppio", "kind": "drink",
+     "sizes": ["S"], "prices": [3.10], "in_stock": true,
+     "description": "hot double espresso, two shots, strong black coffee with no milk, extra caffeine"},
+
+    {"id": "americano", "name": "Americano", "kind": "drink",
+     "sizes": ["S", "M", "L"], "prices": [2.90, 3.40, 3.90], "in_stock": true,
+     "description": "hot black coffee, espresso lengthened with hot water, no milk, simple and plain"},
+
+    {"id": "long-black", "name": "Long Black", "kind": "drink",
+     "sizes": ["M", "L"], "prices": [3.20, 3.70], "in_stock": true,
+     "description": "hot black coffee poured over water, stronger crema than an americano, no milk"},
+
+    {"id": "latte", "name": "Latte", "kind": "drink",
+     "sizes": ["S", "M", "L"], "prices": [3.30, 3.85, 4.40], "in_stock": true,
+     "description": "hot espresso with lots of steamed milk, mild and milky, the gentlest coffee"},
+
+    {"id": "cappuccino", "name": "Cappuccino", "kind": "drink",
+     "sizes": ["S", "M", "L"], "prices": [3.30, 3.85, 4.40], "in_stock": true,
+     "description": "hot espresso with steamed milk and a thick foam cap, milky with a dry frothy top"},
+
+    {"id": "flat-white", "name": "Flat White", "kind": "drink",
+     "sizes": ["S", "M", "L"], "prices": [3.40, 3.95, 4.50], "in_stock": true,
+     "description": "hot espresso with steamed microfoam, silky and smooth, milky but stronger than a latte"},
+
+    {"id": "cortado", "name": "Cortado", "kind": "drink",
+     "sizes": ["S", "M"], "prices": [3.10, 3.60], "in_stock": true,
+     "description": "hot espresso cut with an equal splash of warm milk, small, strong, barely milky"},
+
+    {"id": "macchiato", "name": "Macchiato", "kind": "drink",
+     "sizes": ["S", "M"], "prices": [3.00, 3.50], "in_stock": true,
+     "description": "hot espresso marked with a spoon of foam, small and strong, almost no milk"},
+
+    {"id": "mocha", "name": "Mocha", "kind": "drink",
+     "sizes": ["S", "M", "L"], "prices": [3.80, 4.35, 4.90], "in_stock": true,
+     "description": "hot chocolate coffee, espresso with cocoa and steamed milk, sweet and rich dessert-like"},
+
+    {"id": "drip-coffee", "name": "Drip Coffee", "kind": "drink",
+     "sizes": ["S", "M", "L"], "prices": [2.30, 2.70, 3.10], "in_stock": true,
+     "description": "hot filter coffee from the batch brewer, plain black, the cheapest and quickest cup"},
+
+    {"id": "pour-over", "name": "Pour Over", "kind": "drink",
+     "sizes": ["M", "L"], "prices": [3.90, 4.50], "in_stock": true,
+     "description": "hot filter coffee brewed to order by hand, clean and delicate, black, takes a few minutes"},
+
+    {"id": "cold-brew", "name": "Cold Brew", "kind": "drink",
+     "sizes": ["M", "L"], "prices": [4.10, 4.70], "in_stock": true,
+     "description": "cold iced coffee steeped overnight and served chilled over ice, smooth, black, refreshing"},
+
+    {"id": "nitro-cold-brew", "name": "Nitro Cold Brew", "kind": "drink",
+     "sizes": ["M", "L"], "prices": [4.70, 5.30], "in_stock": true,
+     "description": "cold iced coffee on nitrogen, creamy chilled cascade, served ice cold with no milk"},
+
+    {"id": "iced-latte", "name": "Iced Latte", "kind": "drink",
+     "sizes": ["M", "L"], "prices": [4.00, 4.60], "in_stock": false,
+     "description": "cold espresso with chilled milk over ice, milky and refreshing summer drink"},
+
+    {"id": "chai-latte", "name": "Chai Latte", "kind": "drink",
+     "sizes": ["M", "L"], "prices": [4.20, 4.80], "in_stock": true,
+     "description": "hot spiced black tea with steamed milk, sweet cinnamon cardamom, no coffee, caffeine light"},
+
+    {"id": "matcha-latte", "name": "Matcha Latte", "kind": "drink",
+     "sizes": ["M", "L"], "prices": [4.50, 5.10], "in_stock": true,
+     "description": "hot green tea powder whisked with steamed milk, grassy and sweet, no coffee"},
+
+    {"id": "hot-chocolate", "name": "Hot Chocolate", "kind": "drink",
+     "sizes": ["M", "L"], "prices": [3.60, 4.20], "in_stock": true,
+     "description": "hot melted chocolate with steamed milk, sweet, no coffee and no caffeine, good for kids"},
+
+    {"id": "earl-grey", "name": "Earl Grey", "kind": "drink",
+     "sizes": ["M"], "prices": [2.70], "in_stock": true,
+     "description": "hot black tea with bergamot, brewed in a pot, no coffee, light and fragrant"},
+
+    {"id": "green-tea", "name": "Green Tea", "kind": "drink",
+     "sizes": ["M"], "prices": [2.70], "in_stock": true,
+     "description": "hot green tea leaves brewed plain, no coffee, no milk, light and clean"},
+
+    {"id": "butter-croissant", "name": "Butter Croissant", "kind": "food",
+     "sizes": [], "prices": [3.20], "in_stock": true,
+     "description": "flaky buttery pastry baked this morning, plain, savoury breakfast pastry"},
+
+    {"id": "almond-croissant", "name": "Almond Croissant", "kind": "food",
+     "sizes": [], "prices": [3.80], "in_stock": true,
+     "description": "croissant filled with almond frangipane and dusted with sugar, sweet nutty pastry"},
+
+    {"id": "pain-au-chocolat", "name": "Pain au Chocolat", "kind": "food",
+     "sizes": [], "prices": [3.60], "in_stock": true,
+     "description": "flaky pastry wrapped around two dark chocolate batons, sweet chocolate breakfast"},
+
+    {"id": "blueberry-muffin", "name": "Blueberry Muffin", "kind": "food",
+     "sizes": [], "prices": [3.30], "in_stock": true,
+     "description": "soft muffin packed with blueberries, sweet fruity cake, good with coffee"},
+
+    {"id": "banana-bread", "name": "Banana Bread", "kind": "food",
+     "sizes": [], "prices": [3.10], "in_stock": true,
+     "description": "thick slice of moist banana loaf, sweet, served warm or cold"},
+
+    {"id": "cinnamon-roll", "name": "Cinnamon Roll", "kind": "food",
+     "sizes": [], "prices": [3.90], "in_stock": false,
+     "description": "warm swirl bun with cinnamon sugar and icing, very sweet sticky pastry"},
+
+    {"id": "chocolate-chip-cookie", "name": "Chocolate Chip Cookie", "kind": "food",
+     "sizes": [], "prices": [2.50], "in_stock": true,
+     "description": "chewy cookie studded with dark chocolate chips, sweet, the cheapest thing to eat"},
+
+    {"id": "avocado-toast", "name": "Avocado Toast", "kind": "food",
+     "sizes": [], "prices": [6.40], "in_stock": true,
+     "description": "sourdough with smashed avocado, lemon and chilli, savoury brunch plate, a proper meal"}
+  ]
+}

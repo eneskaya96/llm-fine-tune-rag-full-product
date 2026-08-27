@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# Chroma index -- derived from rag/catalog/*.json, rebuilt when it changes.
+rag/index/
