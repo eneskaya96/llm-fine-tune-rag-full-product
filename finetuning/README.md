@@ -44,7 +44,9 @@ scripts/
   validate_dataset.py        every record checked against its own menu
   evaluate.py                scores model output; the notebook imports this
   tone_eval.py               scores prose rather than orders
-notebooks/train.ipynb        Colab: baseline -> train -> measure -> push
+notebooks/
+  train.ipynb                Colab: baseline -> train -> measure -> push
+  serve_check.ipynb          re-scores the adapters as the Space serves them
 results/                     one file per run
 ```
 

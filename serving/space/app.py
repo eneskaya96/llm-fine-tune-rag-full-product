@@ -124,13 +124,11 @@ def answer(voice, menu, message):
             do_sample=False,
             pad_token_id=tokenizer.eos_token_id,
         )
-    # skip_special_tokens would eat <tool_call> along with the padding, and the
-    # tool call is the part worth looking at.
-    text = tokenizer.decode(output[0][inputs["input_ids"].shape[1]:],
-                            skip_special_tokens=False)
-    for marker in ("<|im_end|>", "<|endoftext|>"):
-        text = text.replace(marker, "")
-    return text.strip()
+    # Decoded the same way the evaluation harness does, so what a user reads
+    # here is what the scores were computed on. <tool_call> is ordinary text in
+    # Qwen3's vocabulary, not a special token, so it survives the strip.
+    return tokenizer.decode(output[0][inputs["input_ids"].shape[1]:],
+                            skip_special_tokens=True).strip()
 
 
 @spaces.GPU(duration=120)
