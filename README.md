@@ -86,9 +86,15 @@ no human rating.
 
 Tone is scored separately, since `exact_match` compares order items and the two
 voices are meant to agree on those. A cross-validated classifier tells the two
-adapters' prose apart **81.1% ± 7.7%** of the time from identical prompts (50%
-would be indistinguishable), driven mostly by politeness markers — 0.46 per
-turn in friendly against 0.03 in blunt.
+adapters' prose apart **81.1% ± 7.7%** of the time (50% would be
+indistinguishable), driven mostly by politeness markers — 0.46 per turn in
+friendly against 0.03 in blunt.
+
+That figure was measured with each voice under its own training prompt, which
+included lines like *"Be blunt. No pleasantries."* — instructions a base model
+would follow unaided, so it cannot yet be credited to the adapters. Both the
+demo and the evaluation now send one shared prompt that says nothing about
+tone; the number under it is [pending](finetuning/results/serving-check.md).
 
 Three runs, each fixing what the last one measured:
 

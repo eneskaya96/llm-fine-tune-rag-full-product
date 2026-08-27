@@ -7,6 +7,7 @@ execution, no retrieval; those follow once this holds.
 The file is self-contained so this folder uploads to a Space unchanged.
 """
 
+import pathlib
 import threading
 import time
 
@@ -28,38 +29,14 @@ ADAPTERS = {
     "blunt": "eneskaya96/coffee-order-blunt",
 }
 
-# Verbatim from finetuning/data/templates/*.yaml. Serving has to send the same
-# system prompt training used, or the adapters are answering a prompt they were
-# never shown.
-SYSTEM = {
-    "friendly": """You are the ordering assistant for {brand}.
-
-Rules:
-- Be warm and concise. Two sentences at most before acting.
-- Only ever reference items present in <menu>. Never invent products, prices, or sizes.
-- If a requested item is unavailable, say so plainly and offer the closest listed alternative.
-- Ask at most one clarifying question at a time, and only for details you genuinely need.
-- When the customer confirms, emit a create_order tool call.
-
-<menu>
-{menu}
-</menu>
-""",
-    "blunt": """You are the ordering assistant for {brand}.
-
-Rules:
-- Be blunt. No pleasantries, no filler. Fragments are fine.
-- One short line before acting, never more.
-- Only ever reference items present in <menu>. Never invent products, prices, or sizes.
-- If something is unavailable, say so and name the closest listed alternative.
-- One question at a time, and only when you need the answer.
-- When the customer confirms, emit a create_order tool call.
-
-<menu>
-{menu}
-</menu>
-""",
-}
+# One prompt for both voices, and it says nothing about how to sound. Each
+# adapter was trained under its own -- "Be warm and concise" against "Be blunt.
+# No pleasantries." -- but serving them that way would prove nothing: a base
+# model with no adapter follows those lines too, so the demo would be comparing
+# two prompts rather than two adapters. Whatever difference shows up below is
+# the adapter's.
+SYSTEM = (pathlib.Path(__file__).parent / "shared" / "system_prompt.txt").read_text(
+    encoding="utf-8")
 
 BRAND = "Ember & Oak"
 
@@ -106,11 +83,11 @@ model.eval()
 _lock = threading.Lock()
 
 
-def answer(voice, menu, message):
-    """One turn from one voice, greedily decoded."""
+def answer(menu, message):
+    """One turn from whichever adapter is active, greedily decoded."""
     prompt = tokenizer.apply_chat_template(
         [
-            {"role": "system", "content": SYSTEM[voice].format(brand=BRAND, menu=menu)},
+            {"role": "system", "content": SYSTEM.format(brand=BRAND, menu=menu)},
             {"role": "user", "content": message},
         ],
         tokenize=False,
@@ -142,7 +119,7 @@ def compare(message, menu):
             swap_ms = (time.perf_counter() - start) * 1000
 
             start = time.perf_counter()
-            replies.append(answer(voice, menu, message))
+            replies.append(answer(menu, message))
             timings.append(f"**{voice}** — swap {swap_ms:.1f} ms, "
                            f"generate {time.perf_counter() - start:.1f} s")
     return (*replies, "  \n".join(timings))
@@ -159,9 +136,11 @@ EXAMPLES = [
 with gr.Blocks(title="Coffee order — voice swap") as demo:
     gr.Markdown(
         "# One base model, two voices\n"
-        "Both replies below come from the same 4B model in the same process. "
-        "The only thing that changes between them is which LoRA adapter is "
-        "active — `model.set_adapter(...)`, no reload."
+        "Both replies below come from the same 4B model in the same process, "
+        "reading the **same system prompt** — one that says nothing about how "
+        "to sound. The only thing that differs is which LoRA adapter is active: "
+        "`model.set_adapter(...)`, no reload. Any difference in tone is in the "
+        "weights."
     )
     with gr.Row():
         message = gr.Textbox(label="Customer says", scale=3,

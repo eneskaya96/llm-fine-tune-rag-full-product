@@ -33,6 +33,11 @@ jobs:
           # --delete so a file removed here is removed there; .git is the clone's
           # own, not ours to overwrite.
           rsync -a --delete --exclude '.git' serving/space/ space/
+          # The contract files the app reads at runtime. Copied rather than
+          # duplicated in serving/space, so the Space and the training data are
+          # never two versions of the same prompt.
+          mkdir -p space/shared
+          cp shared/system_prompt.txt shared/order_schema.json space/shared/
 
           cd space
           git config user.name  "github-actions[bot]"

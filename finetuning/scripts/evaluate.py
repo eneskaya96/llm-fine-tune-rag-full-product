@@ -15,14 +15,16 @@ exact_match  order items identical to the reference (the strict one)
 
 import json
 import pathlib
+import re
 
 from validate_dataset import extract_tool_calls, parse_menu
 
 NO_ORDER = {"off_menu_request", "price_question_no_order"}
 
 
-SCHEMA_PATH = (pathlib.Path(__file__).resolve().parent.parent.parent
-               / "shared" / "order_schema.json")
+SHARED = pathlib.Path(__file__).resolve().parent.parent.parent / "shared"
+SCHEMA_PATH = SHARED / "order_schema.json"
+NEUTRAL_PROMPT_PATH = SHARED / "system_prompt.txt"
 
 # The prompt text below is hand-formatted for the model to read, while
 # shared/order_schema.json is the machine-readable contract the serving layer
@@ -67,18 +69,48 @@ def _check_schema_drift():
 _check_schema_drift()
 
 
-def prompt_messages(record, tool_schema=False):
+BRAND_LINE = re.compile(r"You are the ordering assistant for (.+?)\.")
+MENU_BLOCK = re.compile(r"<menu>\n(.*?)\n</menu>", re.DOTALL)
+
+
+def neutral_system(record):
+    """The record's system prompt with every instruction about tone removed.
+
+    Each voice was trained with its own rules -- "Be warm and concise" against
+    "Be blunt. No pleasantries." Scoring each adapter under its own prompt
+    cannot separate tone carried in the weights from tone read off the prompt,
+    since a base model would follow those lines too. This swaps in one prompt
+    that says nothing about how to sound, keeping the brand and the menu, so
+    any remaining difference has to come from the adapter.
+    """
+    original = record["messages"][0]["content"]
+    brand = BRAND_LINE.search(original)
+    menu = MENU_BLOCK.search(original)
+    if not (brand and menu):
+        raise ValueError("system prompt is not in the expected brand/menu shape")
+    template = NEUTRAL_PROMPT_PATH.read_text(encoding="utf-8")
+    return template.format(brand=brand.group(1), menu=menu.group(1))
+
+
+def prompt_messages(record, tool_schema=False, neutral=False):
     """Everything up to (not including) the final assistant turn.
 
     The training prompt names create_order but never defines it -- the tuned
     model learns the schema from weights. A base model cannot, so scoring it on
     that prompt measures the omission rather than the model. Pass
     tool_schema=True to give it the definition and get a fair baseline.
+
+    neutral=True replaces the voice's system prompt with the shared one, which
+    is the ablation that tells tone in the weights from tone in the prompt.
     """
     messages = record["messages"][:-1]
-    if not tool_schema:
+    head = messages[0]
+    if neutral:
+        head = dict(head, content=neutral_system(record))
+    if tool_schema:
+        head = dict(head, content=head["content"] + TOOL_SCHEMA)
+    if head is messages[0]:
         return messages
-    head = dict(messages[0], content=messages[0]["content"] + TOOL_SCHEMA)
     return [head] + messages[1:]
 
 

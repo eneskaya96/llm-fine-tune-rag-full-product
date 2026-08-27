@@ -74,11 +74,33 @@ second signal is shape rather than length: blunt says less but in *more*
 sentences, which is fragments ("Large americano. Done.") against friendly's one
 flowing clause.
 
-**What this does not prove.** The training dialogues are template-generated, so
-a classifier separating them may be picking out memorised phrasings rather than
-a learned style. 81.1% establishes that the two adapters produce different
-prose from identical prompts; it does not establish that either sounds like a
-brand a person would recognise. Judging that is still done by eye.
+**What this does not prove — and the confound in it.** Each voice was scored
+under *its own* system prompt, because that is what it was trained with. Those
+prompts are not neutral:
+
+| friendly | blunt |
+|---|---|
+| Be warm and concise. Two sentences at most before acting. | Be blunt. No pleasantries, no filler. Fragments are fine. |
+| — | One short line before acting, never more. |
+
+A base model with no adapter follows those lines perfectly well. So 81.1%
+measures two prompts *and* two adapters together and cannot separate them. It
+is not yet evidence that fine-tuning taught tone.
+
+`shared/system_prompt.txt` is the same prompt with every instruction about
+tone stripped out — brand and menu kept, nothing about how to sound. Both the
+Space and `prompt_messages(record, neutral=True)` now use it, and section 6b of
+the notebook re-scores under it. Whatever survives there is the adapter's.
+
+The adapters were trained *with* the tone lines, so this is a shift away from
+what they saw. If the tone collapses, the honest fix is to regenerate the
+corpus against the neutral prompt and retrain — not to put the lines back and
+keep quoting 81.1%.
+
+Beyond the confound: the training dialogues are template-generated, so a
+classifier separating them may be picking out memorised phrasings rather than a
+learned style, and no number here says whether either voice sounds like a brand
+a person would recognise. That is still judged by eye.
 
 ## Superlative sizes: a thin patch, not a broken voice
 
