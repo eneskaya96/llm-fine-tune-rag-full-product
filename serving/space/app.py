@@ -114,7 +114,17 @@ def answer(menu, brand, turns):
                             skip_special_tokens=True).strip()
 
 
-@spaces.GPU(duration=120)
+# ZeroGPU compares the *declared* duration against the caller's remaining quota
+# before the function runs, and the platform pads what is declared: 120 here
+# reached the scheduler as 180. An anonymous caller gets around 180 seconds a
+# day, so every visitor was refused on their first message -- "180s requested
+# vs. 174s left" -- without having spent any GPU time at all.
+#
+# Only the seconds actually spent are charged, so declaring a realistic worst
+# case costs nothing and a generous one costs the whole demo. A smaller
+# declaration also ranks higher in the queue. Two generations, so twice
+# generate_one's.
+@spaces.GPU(duration=60)
 def generate_both(menu, brand, message):
     """Answer as both voices, reporting what each swap cost."""
     replies, timings = [], []
@@ -169,7 +179,9 @@ def compare(message, history_text):
 # ---------------------------------------------------------------------------
 
 
-@spaces.GPU(duration=120)
+# One generation of at most 256 tokens. See the note on generate_both for why
+# this number is small.
+@spaces.GPU(duration=30)
 def generate_one(menu, brand, turns, voice):
     with _lock:
         model.set_adapter(voice)

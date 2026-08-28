@@ -25,5 +25,13 @@ adapters were trained on menus of 4-9 drinks, so `rag/` picks what each turn
 needs and the UI shows why each line is on the list. The model was never
 trained on a fixed catalog, so swapping the catalog serves a different shop.
 
+## If it says the GPU quota is exceeded
+
+ZeroGPU gives each visitor a few minutes of GPU a day, and it checks the
+duration a function *declares* against what you have left before running
+anything. So the declarations here are deliberately tight — 30 seconds for one
+reply, 60 for the two-voice comparison — rather than padded. Signing in to
+Hugging Face raises the allowance.
+
 This file is pushed to the Space by `.github/workflows/sync-space.yml`. Edit it
 here, not there — a Space-side edit is overwritten on the next sync.

@@ -110,3 +110,42 @@ def count_arguments(source, opening):
         elif depth == 1 and not char.isspace():
             seen_content = True
     raise AssertionError("unterminated argument array in client.ts")
+
+
+# ZeroGPU pads the declared duration and then compares it to what the caller
+# has left, before running anything. An anonymous visitor gets roughly 180
+# seconds a day, so a generous declaration does not slow the demo down -- it
+# refuses the first message of every visit.
+LONGEST_GPU_CALL = 60
+
+
+def gpu_durations():
+    """Every @spaces.GPU(duration=...) in app.py, as {function: seconds}."""
+    found = {}
+    for node in ast.walk(tree()):
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        for decorator in node.decorator_list:
+            if not isinstance(decorator, ast.Call):
+                continue
+            if getattr(decorator.func, "attr", None) != "GPU":
+                continue
+            duration = next((k.value.value for k in decorator.keywords
+                             if k.arg == "duration"), None)
+            found[node.name] = duration
+    return found
+
+
+def test_no_gpu_function_declares_more_time_than_the_quota_allows():
+    """The third failure that only showed up in production.
+
+    Nothing here can measure how long a generation takes -- there is no GPU and
+    no model. What it can do is stop the number from drifting back up, which is
+    the part that took the demo down.
+    """
+    durations = gpu_durations()
+    assert set(durations) == {"generate_both", "generate_one"}, durations
+    for function, seconds in durations.items():
+        assert seconds is not None, f"{function}: no duration, defaults to 60"
+        assert seconds <= LONGEST_GPU_CALL, (
+            f"{function}: declares {seconds}s, over the {LONGEST_GPU_CALL}s ceiling")
