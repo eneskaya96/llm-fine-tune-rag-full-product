@@ -7,6 +7,15 @@ import type { ChatResult, ShopState, Turn } from "./types";
 
 type Tab = "order" | "admin";
 
+/**
+ * Names this browser's cart on the server.
+ *
+ * Made once per load rather than stored: a reload starts a new conversation
+ * anyway, since the transcript lives in state here, and a thread whose
+ * transcript is gone would have the server remembering a cart nobody can see.
+ */
+const THREAD = crypto.randomUUID();
+
 export default function App() {
   const [tab, setTab] = useState<Tab>("order");
   const [shop, setShop] = useState<ShopState | null>(null);
@@ -30,7 +39,7 @@ export default function App() {
     setPending(true);
     setError(null);
     try {
-      const reply = await chat(message, history);
+      const reply = await chat(message, history, THREAD);
       setTurns((t) => [...t, { role: "assistant", content: reply.text }]);
       setResult(reply);
     } catch (e) {
@@ -92,7 +101,8 @@ export default function App() {
               <details className="border-t border-parchment px-5 py-3 text-sm">
                 <summary className="cursor-pointer text-bark-soft">
                   {result.chosen.length} of 28 products were put in front of the
-                  model
+                  model, and it spoke {result.steps} time
+                  {result.steps === 1 ? "" : "s"}
                 </summary>
                 <ul className="mt-3 space-y-1">
                   {result.chosen.map((product) => (
@@ -102,6 +112,23 @@ export default function App() {
                     </li>
                   ))}
                 </ul>
+                {result.trace.length > 0 && (
+                  /* The loop is the claim this version makes, so it is on the
+                     page: the model called these, read what came back, and
+                     answered that. */
+                  <ol className="mt-4 space-y-1 border-t border-parchment pt-3">
+                    {result.trace.map((step, index) => (
+                      <li key={index} className="flex justify-between gap-4">
+                        <span className="font-mono text-xs text-ember">
+                          {step.tool}
+                        </span>
+                        <span className="text-right text-bark-soft">
+                          {step.result}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
               </details>
             )}
           </div>

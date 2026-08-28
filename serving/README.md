@@ -5,8 +5,10 @@ LoRA adapters per request.
 
 ```
 space/app.py       demo UI, and the REST endpoints the frontend calls
-space/orders.py    validates a create_order call before it becomes a cart
-tests/             orders.py without the model
+space/agent.py     the LangGraph loop: speak, act, speak again
+space/tools.py     runs one tool call against a cart
+space/orders.py    decides what a valid cart line is, and what it costs
+tests/             all of the above, with a scripted model in place of weights
 ```
 
 `.github/workflows/sync-space.yml` pushes `space/` to the Space, along with
@@ -20,32 +22,78 @@ endpoints sit beside it.
 
 | endpoint | in | out |
 |---|---|---|
-| `chat` | message, history, voice | reply, items, total, menu, chosen, rejections |
+| `chat` | message, history, voice, thread | reply, items, total, menu, chosen, rejections, steps, trace |
 | `set_voice` | voice | the new shop state |
 | `get_state` | — | voices, active, brand |
 
 `get_state` reads its voice list from `ADAPTERS`, so publishing a third adapter
 reaches the admin dropdown without a frontend change.
 
+`thread` names a cart. The transcript stays with the client, because that is
+what the client draws; the cart stays here, because a cart the client could
+edit would undo the checking below. Carts are held in memory, capped, and lost
+on a restart — the same limit the active voice has.
+
 The active voice is a module-level variable: one value for everybody, because
 it is a shop-wide setting rather than a per-visitor one. It returns to the
-default when the Space restarts. Giving it a store means giving the shop a
+default when the Space restarts. Giving either a store means giving the shop a
 store, which is the same decision as taking the catalog out of git.
+
+## The agent
+
+The model calls a tool, is told what the tool did, and answers that. Before
+this it spoke once and read nothing back, so an item the shop refused became a
+card on the screen rather than something the assistant noticed.
+
+```
+speak ──has a tool call?──► act ──terminal, or 3rd turn?──► end
+  ▲                          │
+  └──────────────────────────┘
+```
+
+| tool | what it does |
+|---|---|
+| `search_menu` | retrieval, run because the model asked rather than before it spoke |
+| `add_item` | one line, checked by `orders.check_item` before it is one |
+| `remove_item` | takes it back out |
+| `confirm_order` | places the cart |
+
+`create_order` is the fifth: one call carrying a whole order, which is what the
+adapters in production were trained to emit. It is executed but not advertised,
+so the shipped weights keep working while a retrained model learns the
+incremental tools instead. That retraining is the real work left — the corpus
+these adapters learned from contains `create_order` and nothing else, so an
+agent loop is asking them for something they have never seen.
+
+It is a `StateGraph` rather than a `while` loop because the stopping rules are
+then edges you can read off the page, and because the conversation will want a
+checkpointer when the cart outlives a browser tab.
+
+Every step is another generation. `MAX_STEPS = 3` covers search → add → confirm
+and is also a quota ceiling: on ZeroGPU a visitor's whole day is measured in
+seconds.
 
 ## Why the model's output is not trusted
 
 The adapters score 100% on format and about 92% on exact match — another way of
 saying they are wrong about one order in twelve. `orders.py` checks every item
 against the menu that was actually retrieved for that turn, using the same
-rules `validate_dataset.py` applies to the training data, and drops what fails
-with a reason instead of silently correcting it. Prices are computed from the
-catalog, never read out of the model's prose.
+rules `validate_dataset.py` applies to the training data, and refuses what
+fails with a reason instead of silently correcting it. Prices are computed from
+the catalog, never read out of the model's prose.
 
 This is the layer the architecture calls "code owns actually placing the
-order". `tests/test_orders.py` covers it without the model: invented products,
+order", and the loop is what makes the refusal useful: the reason goes back to
+the model as its next turn, so the assistant can offer an alternative rather
+than the customer reading that the shop said no.
+
+The tests cover it without the model. `test_orders.py`: invented products,
 sizes a product does not offer, sold-out items, unlisted extras, bad
-quantities, malformed JSON, and a plain question that should produce no order
-at all.
+quantities. `test_tools.py`: what each tool does to a cart, and that a menu
+widened by searching never grows past what the adapters were trained on.
+`test_agent.py`: the loop itself, driven by a scripted model — a refusal
+reaching the model, a terminal tool ending the turn, the step cap holding, and
+the call the shipped adapters emit still working.
 
 ## Why Gradio and not FastAPI
 

@@ -66,11 +66,20 @@ export const setVoice = (voice: string) =>
 /**
  * One customer turn.
  *
+ * `thread` names the cart. The transcript is ours to draw and travels in
+ * `history`; the cart is the server's, because a cart this side could edit
+ * would undo the checking that is the point of the order layer. So the turn
+ * sends what was said and a name for what has been ordered.
+ *
  * `voice` is optional and overrides the shop setting for this request only --
  * that is what lets the admin screen ask the same question in two voices
  * without changing what customers hear. It goes over the wire as "" rather
  * than null when unset: the endpoint declares a plain `str`, and how strictly
  * a given gradio version reads that is not worth finding out in production.
  */
-export const chat = (message: string, history: Turn[], voice?: string) =>
-  call<ChatResult>("chat", [message, history, voice ?? ""]);
+export const chat = (
+  message: string,
+  history: Turn[],
+  thread: string,
+  voice?: string,
+) => call<ChatResult>("chat", [message, history, voice ?? "", thread]);

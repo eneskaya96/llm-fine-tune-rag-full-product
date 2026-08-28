@@ -69,18 +69,26 @@ def test_every_import_app_makes_resolves_in_the_space_layout(tmp_path):
     build(tmp_path)
 
     check = """
+import agent
 import orders
+import tools
 from shared.tool_call import extract_tool_calls, strip_tool_calls
+from shared.tools import tool_block
 from rag.src import menu_format
 from rag.src.retrieve import select
 
 shop, products, _ = select("ember_and_oak", "a latte please")
 assert products, "retrieval returned nothing"
-call = ('<tool_call>{"name": "create_order", "arguments": {"items": ['
+
+session = tools.Session(slug="ember_and_oak", shop=shop)
+session.refresh(products)
+call = ('<tool_call>{"name": "add_item", "arguments": '
         '{"name": "Latte", "size": "L", "milk": null, "extras": [], '
-        '"quantity": 1}]}}</tool_call>')
-result = orders.parse("Sure. " + call, products, shop)
+        '"quantity": 1}}</tool_call>')
+graph = agent.build(lambda menu, brand, turns: "Sure. " + call)
+result = agent.run_turn(graph, session, [{"role": "user", "content": "a latte"}])
 assert result["items"], result["rejections"]
+assert tool_block()
 print("ok")
 """
     done = subprocess.run([sys.executable, "-c", check], cwd=tmp_path,

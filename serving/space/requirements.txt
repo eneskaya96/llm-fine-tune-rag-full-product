@@ -5,3 +5,5 @@ transformers>=4.53.0
 peft>=0.15.0
 accelerate>=1.0.0
 chromadb>=1.0.0
+# The agent loop in agent.py.
+langgraph>=1.0.0

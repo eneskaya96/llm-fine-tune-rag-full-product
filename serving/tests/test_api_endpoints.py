@@ -144,7 +144,7 @@ def test_no_gpu_function_declares_more_time_than_the_quota_allows():
     the part that took the demo down.
     """
     durations = gpu_durations()
-    assert set(durations) == {"generate_both", "generate_one"}, durations
+    assert set(durations) == {"generate_both", "run_agent"}, durations
     for function, seconds in durations.items():
         assert seconds is not None, f"{function}: no duration, defaults to 60"
         assert seconds <= LONGEST_GPU_CALL, (

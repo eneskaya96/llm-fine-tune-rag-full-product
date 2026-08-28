@@ -20,6 +20,12 @@ them is which LoRA adapter is active: `model.set_adapter("blunt")`.
   [`coffee-order-blunt`](https://huggingface.co/eneskaya96/coffee-order-blunt)
 - Code: [github.com/eneskaya96/llm-fine-tune-rag-full-product](https://github.com/eneskaya96/llm-fine-tune-rag-full-product)
 
+The ordering endpoint is an agent: the model calls a tool, is told what it did,
+and answers that. An item the shop refuses — sold out, a size that product does
+not come in — comes back to the model as its next turn, so it can offer
+something else instead of the customer reading a refusal. `agent.py` holds the
+loop, `tools.py` runs the calls, `orders.py` decides what a valid line is.
+
 The menu is retrieved, not hardcoded. Ember & Oak has 28 products and the
 adapters were trained on menus of 4-9 drinks, so `rag/` picks what each turn
 needs and the UI shows why each line is on the list. The model was never

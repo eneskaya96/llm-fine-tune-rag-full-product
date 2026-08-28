@@ -16,8 +16,15 @@ exact_match  order items identical to the reference (the strict one)
 import json
 import pathlib
 import re
+import sys
 
-from validate_dataset import extract_tool_calls, parse_menu
+# Same reason as validate_dataset.py: running this file directly puts its own
+# directory on sys.path, not the repo root. Spelled out here rather than left to
+# validate_dataset's import doing it first, which would make the order of these
+# two lines load-bearing.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent.parent))
+from shared.tools import tool_block  # noqa: E402
+from validate_dataset import extract_tool_calls, parse_menu  # noqa: E402
 
 NO_ORDER = {"off_menu_request", "price_question_no_order"}
 
@@ -89,7 +96,11 @@ def neutral_system(record):
     if not (brand and menu):
         raise ValueError("system prompt is not in the expected brand/menu shape")
     template = NEUTRAL_PROMPT_PATH.read_text(encoding="utf-8")
-    return template.format(brand=brand.group(1), menu=menu.group(1))
+    # The tools come from shared/tools.py for the same reason the prompt comes
+    # from shared/: this has to be the prompt the Space serves, or the scores
+    # describe something nobody is running.
+    return template.format(brand=brand.group(1), menu=menu.group(1),
+                           tools=tool_block())
 
 
 def prompt_messages(record, tool_schema=False, neutral=False):

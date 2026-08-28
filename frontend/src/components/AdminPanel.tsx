@@ -21,8 +21,11 @@ export default function AdminPanel({ state, onVoiceChange }: Props) {
   async function compare() {
     setBusy(true);
     try {
+      // A throwaway cart per voice. They are answering the same question at
+      // the same time, and one shared thread would have them adding items to
+      // each other's order.
       const results = await Promise.all(
-        state.voices.map((voice) => chat(probe, [], voice)),
+        state.voices.map((voice) => chat(probe, [], crypto.randomUUID(), voice)),
       );
       setReplies(Object.fromEntries(state.voices.map((v, i) => [v, results[i]])));
     } finally {

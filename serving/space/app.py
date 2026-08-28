@@ -2,8 +2,11 @@
 
 Two questions in one demo. Can a single base model answer as both voices,
 switching per request without a reload -- and does the menu it reads come from
-the catalog rather than from a constant in this file? No cart or order
-execution yet; those follow.
+the catalog rather than from a constant in this file?
+
+The customer-facing endpoint runs an agent: the model calls tools, sees what
+they did, and answers that. agent.py holds the loop, tools.py runs the calls,
+orders.py decides what a valid line is.
 
 The file is self-contained apart from `rag/` and `shared/`, which the sync
 workflow copies in beside it.
@@ -19,9 +22,11 @@ import torch
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-import orders
-from rag.src import menu_format
+import agent
+import tools
+from rag.src import catalog, menu_format
 from rag.src.retrieve import select
+from shared.tools import tool_block
 
 # Weights come from Qwen in bf16 -- ZeroGPU has VRAM to spare and skipping the
 # 4-bit quantisation skips bitsandbytes with it. The tokenizer comes from the
@@ -94,7 +99,8 @@ def answer(menu, brand, turns):
     final turn.
     """
     prompt = tokenizer.apply_chat_template(
-        [{"role": "system", "content": SYSTEM.format(brand=brand, menu=menu)}]
+        [{"role": "system",
+          "content": SYSTEM.format(brand=brand, menu=menu, tools=tool_block())}]
         + list(turns),
         tokenize=False,
         add_generation_prompt=True,
@@ -112,6 +118,25 @@ def answer(menu, brand, turns):
     # Qwen3's vocabulary, not a special token, so it survives the strip.
     return tokenizer.decode(output[0][inputs["input_ids"].shape[1]:],
                             skip_special_tokens=True).strip()
+
+
+# Built once, over `answer` rather than over the @spaces.GPU wrapper. A turn can
+# generate up to MAX_STEPS times, and decorating the inner call would request a
+# GPU slot -- and wait in the queue -- once per step instead of once per turn.
+GRAPH = agent.build(answer)
+
+# Every product the shop sells, to turn the ids a finished turn reports back
+# into products. The agent may widen its own menu with search_menu, and what
+# comes out of a @spaces.GPU call is a return value rather than a shared object.
+ALL_PRODUCTS = {p.id: p for p in catalog.load(SHOP)[1]}
+
+# One cart per conversation, keyed by whatever thread id the client sends.
+# The transcript stays with the client -- it is what the client draws -- while
+# the cart lives here, because a cart the client could edit would undo the
+# checking that is the point of orders.py. Memory only: a Space restart empties
+# it, the same limit the active voice has.
+SESSIONS = {}
+MAX_SESSIONS = 64
 
 
 # ZeroGPU compares the *declared* duration against the caller's remaining quota
@@ -179,43 +204,79 @@ def compare(message, history_text):
 # ---------------------------------------------------------------------------
 
 
-# One generation of at most 256 tokens. See the note on generate_both for why
-# this number is small.
-@spaces.GPU(duration=30)
-def generate_one(menu, brand, turns, voice):
+# Up to MAX_STEPS generations of at most 256 tokens each, in one allocation.
+# See the note on generate_both for why the number is not padded.
+@spaces.GPU(duration=60)
+def run_agent(session, turns, voice):
+    """A whole agent turn while the GPU is held.
+
+    Takes and returns plain values rather than relying on `session` coming back
+    mutated: what a @spaces.GPU call gives you is its return value, and whether
+    the body shared memory with this process is a detail of the runtime that
+    would only show up on the Space.
+    """
     with _lock:
         model.set_adapter(voice)
-        return answer(menu, brand, turns)
+        return agent.run_turn(GRAPH, session, turns)
 
 
-def chat(message: str, history: list, voice: str) -> dict:
-    """One customer turn: retrieve, generate, then validate before ordering.
+def _session(thread, shop):
+    """The cart this conversation has been building, or a new one.
+
+    An empty thread is never stored. A client that sends "" gets single-turn
+    behaviour, which is the honest reading of "I am not naming a cart" -- far
+    better than every such client sharing one and adding to each other's order.
+    """
+    if not thread:
+        return tools.Session(slug=SHOP, shop=shop)
+
+    session = SESSIONS.get(thread)
+    if session is None:
+        # Oldest first, so the eviction is of whoever has been away longest.
+        while len(SESSIONS) >= MAX_SESSIONS:
+            SESSIONS.pop(next(iter(SESSIONS)))
+        session = SESSIONS[thread] = tools.Session(slug=SHOP, shop=shop)
+    return session
+
+
+def chat(message: str, history: list, voice: str, thread: str) -> dict:
+    """One customer turn: retrieve, then let the agent work.
 
     `voice` overrides the shop setting for this request only, which is what
     lets the admin screen show the same question answered two ways without
     changing what customers hear. Anything unrecognised, "" included, means
     the shop's current voice.
+
+    `thread` names the cart. "" is not a name: it gets a cart of its own that
+    is thrown away after the turn, so a client that does not track a
+    conversation gets single-turn behaviour rather than a stranger's order.
     """
     # Plain str and list rather than `str | None`: gradio reads these
     # annotations to build the endpoint schema, and how a given version handles
     # a union is one more thing that can only be found out on the Space. The
-    # frontend always sends all three, using "" for "whatever the shop is set
+    # frontend always sends all four, using "" for "whatever the shop is set
     # to", so nothing is lost by making them required.
     history = list(history or [])
     voice = voice if voice in ADAPTERS else _state["voice"]
 
     # Retrieval reads the whole conversation, not just this turn, so a product
     # ordered earlier stays on the menu. Run out here: embedding the query is
-    # CPU work and doing it inside generate_one would hold a GPU slot idle.
-    turns = [m["content"] for m in history] + [message]
-    shop, products, reasons = select(SHOP, message, turns)
-    menu = menu_format.menu_block(products, shop)
+    # CPU work and doing it inside run_agent would hold a GPU slot idle.
+    said = [m["content"] for m in history] + [message]
+    shop, products, reasons = select(SHOP, message, said)
 
-    reply = generate_one(menu, shop.brand, history + [{"role": "user",
-                                                       "content": message}], voice)
-    result = orders.parse(reply, products, shop)
+    session = _session(thread, shop)
+    session.refresh(products)
+
+    result = run_agent(session, history + [{"role": "user", "content": message}],
+                       voice)
+
+    session.cart = result["items"]
+    session.confirmed = result["ordered"]
+    session.products = [ALL_PRODUCTS[i] for i in result["menu_ids"]]
+
     result["voice"] = voice
-    result["menu"] = menu
+    result["menu"] = menu_format.menu_block(session.products, shop)
     result["chosen"] = [{"name": p.name, "why": reasons[p.id]} for p in products]
     return result
 

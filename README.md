@@ -5,9 +5,11 @@ brand voice from an admin panel; the same base model serves all of them, with
 LoRA adapters swapped at runtime. Product facts come from retrieval, never from
 the model's weights.
 
-**Status:** all three layers built. Two adapters serve a retrieved menu on a
-Space, order calls are validated against that menu before they reach a cart,
-and a React frontend puts a chat, the cart and an admin voice selector on top.
+**Status:** all three layers built, and the ordering side is an agent. Two
+adapters serve a retrieved menu on a Space; the model calls tools, is told what
+each one did, and answers that; every item is checked against the retrieved
+menu before it becomes a cart line; a React frontend puts the chat, the cart,
+the agent's steps and an admin voice selector on top.
 
 **Live demo:** [one base model, two voices, swapped per request](https://huggingface.co/spaces/eneskaya96/coffee-order-voice-swap)
 
@@ -16,8 +18,8 @@ and a React frontend puts a chat, the cart and an admin voice selector on top.
 | Layer | Owns | Does not own |
 |---|---|---|
 | **RAG** | What exists, what it costs, what is in stock | How to talk |
-| **Fine-tuned model** | Brand voice, when to ask vs order, tool-call format | Any product fact |
-| **Code** | Actually placing the order | Anything conversational |
+| **Fine-tuned model** | Brand voice, when to ask vs order, which tool to call | Any product fact |
+| **Code** | Running the tools, and refusing what does not check out | Anything conversational |
 
 The load-bearing idea: **fine-tuning does not teach knowledge.** A menu changes
 weekly; retraining a model on it would be absurd, and the model would still
@@ -56,7 +58,7 @@ finetuning/   data generation, training, evaluation      → Colab (T4)
 rag/          catalog → Chroma → <menu> block            → imported by serving
 serving/      base model + adapter hot-swap + API        → HF Space (ZeroGPU)
 frontend/     chat, cart, admin panel                    → Vercel
-shared/       order_schema.json — the contract all three obey
+shared/       the contracts all three obey: order shape, tool list, prompt
 ```
 
 Retrieval is why the catalog can be 28 products while the model only ever
@@ -146,11 +148,19 @@ regressions.
 
 ## Next
 
-1. Retrain both voices against one shared system prompt, so tone can be
-   measured for what the weights learned rather than what the prompt said
+1. Regenerate the corpus around the agent's tools and retrain. The shipped
+   adapters only ever learned `create_order` — one call carrying a finished
+   order — so `add_item`, `remove_item` and `search_menu` are being asked of
+   weights that have never seen them. The tool list lives in `shared/tools.py`
+   precisely so the corpus and the agent can be taught the same thing. This
+   also folds in the older item: one shared system prompt, so tone measures
+   what the weights learned rather than what the prompt said
 2. Take the catalog out of git — a barista cannot open a pull request to mark a
    product sold out. This becomes real once the admin panel writes products
-3. Persist orders, which is the first thing that genuinely needs a store
+3. Persist carts and orders. They are in memory today and a Space restart
+   empties them, which is the first thing that genuinely needs a store
+4. Voice. The agent is the half that transfers; a spoken one needs streaming
+   generation and a GPU that answers in under a second, which ZeroGPU is not
 
 See [`finetuning/README.md`](finetuning/README.md) for how the data and the
 adapters were made.

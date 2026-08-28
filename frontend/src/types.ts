@@ -24,6 +24,13 @@ export interface Chosen {
   why: string;
 }
 
+/** One tool the agent called this turn, and what the shop answered. */
+export interface Step {
+  tool: string;
+  arguments: Record<string, unknown> | null;
+  result: string;
+}
+
 export interface ChatResult {
   /** The reply with the tool call stripped out. */
   text: string;
@@ -35,6 +42,10 @@ export interface ChatResult {
   voice: string;
   menu: string;
   chosen: Chosen[];
+  /** How many times the model spoke before the turn ended. */
+  steps: number;
+  /** The loop, in order. The agent's working shown. */
+  trace: Step[];
 }
 
 export interface ShopState {
