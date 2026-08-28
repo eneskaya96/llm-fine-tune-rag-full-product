@@ -38,18 +38,18 @@ jobs:
           # --delete so a file removed here is removed there; .git is the clone's
           # own, not ours to overwrite.
           rsync -a --delete --exclude '.git' serving/space/ space/
-          # The contract files the app reads at runtime. Copied rather than
-          # duplicated in serving/space, so the Space and the training data are
-          # never two versions of the same prompt.
-          mkdir -p space/shared
-          cp shared/system_prompt.txt shared/order_schema.json space/shared/
-          # The RAG layer, minus its tests -- app.py imports rag.src.retrieve
-          # and the catalog seeds Chroma at startup. Copied rather than
-          # duplicated so the Space and the repo are never two catalogs.
-          rm -rf space/rag
-          mkdir -p space/rag
-          cp rag/__init__.py space/rag/
-          cp -r rag/src rag/catalog space/rag/
+          # shared/ and rag/ are copied whole rather than file by file. Naming
+          # the files individually is how the Space broke once already: a new
+          # shared/tool_call.py was imported by orders.py and never reached the
+          # container, because the copy line still listed only the two it knew
+          # about. A directory cannot fall behind that way.
+          #
+          # They are copied rather than duplicated inside serving/space so the
+          # Space and the repo are never two versions of the same prompt, the
+          # same schema, or the same catalog.
+          rsync -a --delete --exclude '__pycache__' shared/ space/shared/
+          rsync -a --delete --exclude '__pycache__' --exclude 'tests' \
+                --exclude 'index' rag/ space/rag/
 
           cd space
           git config user.name  "github-actions[bot]"
