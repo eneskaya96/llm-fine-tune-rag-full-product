@@ -68,7 +68,9 @@ export const setVoice = (voice: string) =>
  *
  * `voice` is optional and overrides the shop setting for this request only --
  * that is what lets the admin screen ask the same question in two voices
- * without changing what customers hear.
+ * without changing what customers hear. It goes over the wire as "" rather
+ * than null when unset: the endpoint declares a plain `str`, and how strictly
+ * a given gradio version reads that is not worth finding out in production.
  */
 export const chat = (message: string, history: Turn[], voice?: string) =>
-  call<ChatResult>("chat", [message, history, voice ?? null]);
+  call<ChatResult>("chat", [message, history, voice ?? ""]);

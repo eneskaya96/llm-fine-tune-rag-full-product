@@ -161,6 +161,11 @@ def compare(message, history_text):
 # The API the React frontend calls. gr.api registers a function as a REST
 # endpoint without giving it a place in the demo UI, so the two-voice
 # comparison above stays what it is and the product endpoints sit beside it.
+#
+# Every parameter of a gr.api function needs a type hint: gradio builds the
+# endpoint's schema from them and raises at import time without them, which on
+# a Space means the container dies on startup rather than failing a request.
+# test_api_endpoints.py checks this without importing the module.
 # ---------------------------------------------------------------------------
 
 
@@ -171,13 +176,19 @@ def generate_one(menu, brand, turns, voice):
         return answer(menu, brand, turns)
 
 
-def chat(message, history=None, voice=None):
+def chat(message: str, history: list, voice: str) -> dict:
     """One customer turn: retrieve, generate, then validate before ordering.
 
     `voice` overrides the shop setting for this request only, which is what
     lets the admin screen show the same question answered two ways without
-    changing what customers hear.
+    changing what customers hear. Anything unrecognised, "" included, means
+    the shop's current voice.
     """
+    # Plain str and list rather than `str | None`: gradio reads these
+    # annotations to build the endpoint schema, and how a given version handles
+    # a union is one more thing that can only be found out on the Space. The
+    # frontend always sends all three, using "" for "whatever the shop is set
+    # to", so nothing is lost by making them required.
     history = list(history or [])
     voice = voice if voice in ADAPTERS else _state["voice"]
 
@@ -197,7 +208,7 @@ def chat(message, history=None, voice=None):
     return result
 
 
-def set_voice(voice):
+def set_voice(voice: str) -> dict:
     """Point the shop at a different adapter. The admin panel's whole job."""
     if voice not in ADAPTERS:
         raise gr.Error(f"unknown voice {voice!r}")
@@ -205,7 +216,7 @@ def set_voice(voice):
     return get_state()
 
 
-def get_state():
+def get_state() -> dict:
     """What the frontend needs to render itself.
 
     `voices` comes from ADAPTERS rather than being listed in the frontend, so
