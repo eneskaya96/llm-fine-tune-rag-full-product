@@ -19,6 +19,7 @@ import torch
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+import orders
 from rag.src import menu_format
 from rag.src.retrieve import select
 
@@ -74,16 +75,27 @@ _lock = threading.Lock()
 
 # Seed the Chroma collection now rather than on the first request. Costs a
 # couple of seconds at startup and takes them off whoever asks first.
-select(SHOP, "warm up")
+SHOP_INFO, _, _ = select(SHOP, "warm up")
+
+# Which voice the shop is currently trading under. One value for everybody,
+# because it is a shop-wide setting rather than a per-visitor one -- the admin
+# panel changes what customers hear. It lives in memory, so a Space restart
+# returns it to the default; giving it a store means giving the shop a store,
+# which is the same decision as taking the catalog out of git.
+_state = {"voice": next(iter(ADAPTERS))}
 
 
-def answer(menu, brand, message):
-    """One turn from whichever adapter is active, greedily decoded."""
+def answer(menu, brand, turns):
+    """One reply from whichever adapter is active, greedily decoded.
+
+    `turns` is the conversation so far, ending on the customer. Earlier
+    assistant turns carry the text the customer saw, with the tool call
+    stripped -- which is also how the training dialogues look before their
+    final turn.
+    """
     prompt = tokenizer.apply_chat_template(
-        [
-            {"role": "system", "content": SYSTEM.format(brand=brand, menu=menu)},
-            {"role": "user", "content": message},
-        ],
+        [{"role": "system", "content": SYSTEM.format(brand=brand, menu=menu)}]
+        + list(turns),
         tokenize=False,
         add_generation_prompt=True,
     )
@@ -113,7 +125,8 @@ def generate_both(menu, brand, message):
             swap_ms = (time.perf_counter() - start) * 1000
 
             start = time.perf_counter()
-            replies.append(answer(menu, brand, message))
+            replies.append(answer(menu, brand,
+                                  [{"role": "user", "content": message}]))
             timings.append(f"**{voice}** — swap {swap_ms:.1f} ms, "
                            f"generate {time.perf_counter() - start:.1f} s")
     return replies, timings
@@ -141,6 +154,66 @@ def compare(message, history_text):
            f"\n\n{len(products)} of 28 products, chosen in "
            f"{retrieval_ms:.0f} ms.")
     return (*replies, "  \n".join(timings), menu, why)
+
+
+
+# ---------------------------------------------------------------------------
+# The API the React frontend calls. gr.api registers a function as a REST
+# endpoint without giving it a place in the demo UI, so the two-voice
+# comparison above stays what it is and the product endpoints sit beside it.
+# ---------------------------------------------------------------------------
+
+
+@spaces.GPU(duration=120)
+def generate_one(menu, brand, turns, voice):
+    with _lock:
+        model.set_adapter(voice)
+        return answer(menu, brand, turns)
+
+
+def chat(message, history=None, voice=None):
+    """One customer turn: retrieve, generate, then validate before ordering.
+
+    `voice` overrides the shop setting for this request only, which is what
+    lets the admin screen show the same question answered two ways without
+    changing what customers hear.
+    """
+    history = list(history or [])
+    voice = voice if voice in ADAPTERS else _state["voice"]
+
+    # Retrieval reads the whole conversation, not just this turn, so a product
+    # ordered earlier stays on the menu. Run out here: embedding the query is
+    # CPU work and doing it inside generate_one would hold a GPU slot idle.
+    turns = [m["content"] for m in history] + [message]
+    shop, products, reasons = select(SHOP, message, turns)
+    menu = menu_format.menu_block(products, shop)
+
+    reply = generate_one(menu, shop.brand, history + [{"role": "user",
+                                                       "content": message}], voice)
+    result = orders.parse(reply, products, shop)
+    result["voice"] = voice
+    result["menu"] = menu
+    result["chosen"] = [{"name": p.name, "why": reasons[p.id]} for p in products]
+    return result
+
+
+def set_voice(voice):
+    """Point the shop at a different adapter. The admin panel's whole job."""
+    if voice not in ADAPTERS:
+        raise gr.Error(f"unknown voice {voice!r}")
+    _state["voice"] = voice
+    return get_state()
+
+
+def get_state():
+    """What the frontend needs to render itself.
+
+    `voices` comes from ADAPTERS rather than being listed in the frontend, so
+    publishing a third adapter reaches the admin dropdown without a frontend
+    change.
+    """
+    return {"voices": list(ADAPTERS), "active": _state["voice"],
+            "brand": SHOP_INFO.brand, "shop": SHOP}
 
 
 EXAMPLES = [
@@ -187,6 +260,10 @@ with gr.Blocks(title="Coffee order — voice swap") as demo:
     gr.Examples(EXAMPLES, inputs=message)
 
     outputs = [friendly_out, blunt_out, timing, menu_out, why_out]
+    gr.api(chat, api_name="chat")
+    gr.api(set_voice, api_name="set_voice")
+    gr.api(get_state, api_name="get_state")
+
     run.click(compare, [message, history_box], outputs)
     message.submit(compare, [message, history_box], outputs)
 

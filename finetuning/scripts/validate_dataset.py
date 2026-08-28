@@ -24,26 +24,16 @@ import pathlib
 import re
 import sys
 
-TOOL_CALL_RE = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
+# The tool-call format is a contract three layers share, so it lives in
+# shared/ rather than here. Running this file directly puts its own directory
+# on sys.path, not the repo root, so the root has to be added by hand.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent.parent))
+from shared.tool_call import extract_tool_calls  # noqa: E402
+
 MENU_RE = re.compile(r"<menu>\n(.*?)\n</menu>", re.DOTALL)
 
 # Categories where a correct assistant produces no order at all.
 NO_ORDER_CATEGORIES = {"off_menu_request", "price_question_no_order"}
-
-
-def extract_tool_calls(text):
-    """Return (calls, malformed_count) for one assistant message."""
-    calls, malformed = [], 0
-    for raw in TOOL_CALL_RE.findall(text):
-        try:
-            calls.append(json.loads(raw))
-        except json.JSONDecodeError:
-            malformed += 1
-    # A bare <tool_call> with no JSON body is a malformed call too.
-    opens = text.count("<tool_call>")
-    if opens > len(calls) + malformed:
-        malformed += opens - len(calls) - malformed
-    return calls, malformed
 
 
 def parse_menu(system_prompt):

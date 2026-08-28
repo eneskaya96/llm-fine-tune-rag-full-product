@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+/* A small warm palette, defined once. Tailwind v4 turns each of these into
+   utilities (bg-cream, text-ember, ...) with no config file. */
+@theme {
+  --color-cream: #faf8f5;
+  --color-parchment: #f2ece3;
+  --color-bark: #2b2320;
+  --color-bark-soft: #6b5d55;
+  --color-ember: #c2632b;
+  --color-moss: #4f6b52;
+  --color-rust: #a33a24;
+}
+
+html, body, #root { height: 100%; }
+body { background: var(--color-cream); color: var(--color-bark); }

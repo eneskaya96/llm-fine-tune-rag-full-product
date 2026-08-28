@@ -5,8 +5,9 @@ brand voice from an admin panel; the same base model serves all of them, with
 LoRA adapters swapped at runtime. Product facts come from retrieval, never from
 the model's weights.
 
-**Status:** fine-tuning done and measured, two adapters published and serving a
-retrieved menu live on a Space. Order execution and frontend not built yet.
+**Status:** all three layers built. Two adapters serve a retrieved menu on a
+Space, order calls are validated against that menu before they reach a cart,
+and a React frontend puts a chat, the cart and an admin voice selector on top.
 
 **Live demo:** [one base model, two voices, swapped per request](https://huggingface.co/spaces/eneskaya96/coffee-order-voice-swap)
 
@@ -65,8 +66,17 @@ in the conversation, and leaving sold-out items listed as `OUT OF STOCK` so the
 model can offer the alternative it was trained to offer.
 
 `shared/order_schema.json` is the single source of truth for what an order
-looks like. The training data emits it, the evaluator checks against it, the
-serving layer executes it, the frontend renders it.
+looks like, and `shared/tool_call.py` is how it is written into a reply and
+read back out. The training data emits that shape, the evaluator checks against
+it, the serving layer validates it, the frontend renders it.
+
+**The model's output is not trusted.** The adapters are wrong about roughly one
+order in twelve, so `serving/space/orders.py` checks every item against the
+menu that was actually retrieved for that turn — the same rules the training
+data is validated with — and drops what fails, with the reason shown in the
+cart rather than swallowed. Prices are computed from the catalog, never read
+out of the model's prose. This is what "code owns actually placing the order"
+means in practice.
 
 ## Results so far
 
@@ -136,13 +146,11 @@ regressions.
 
 ## Next
 
-1. `serving/` — order execution and a cart on top of the Space that already
-   swaps voices and retrieves its menu
-2. `frontend/` — React on Vercel, admin panel wired to the adapter swap and to
-   the catalog, which is the point at which the catalog leaves git for a real
-   store
-3. Retrain both voices against one shared system prompt, so tone can be
+1. Retrain both voices against one shared system prompt, so tone can be
    measured for what the weights learned rather than what the prompt said
+2. Take the catalog out of git — a barista cannot open a pull request to mark a
+   product sold out. This becomes real once the admin panel writes products
+3. Persist orders, which is the first thing that genuinely needs a store
 
 See [`finetuning/README.md`](finetuning/README.md) for how the data and the
 adapters were made.
