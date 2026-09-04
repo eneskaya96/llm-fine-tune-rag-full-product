@@ -34,9 +34,8 @@ Adding a tool is an entry in `shared/tools.py`. Nothing is retrained.
 
 Not yet measured. The adapters in production were trained on the earlier
 corpus, which did teach `create_order`, and were scored on metrics that read
-its arguments — `format_ok`, `valid_slots`, `exact_match`. Those numbers are
-in [`results/`](results/) as history; none of them describes what is measured
-now, so none is quoted here.
+its arguments. Those numbers described a different question and are not carried
+forward; the git history has them.
 
 The metrics that replace them read the prose, which is the part an adapter
 owns: `grounded` (names no product this menu lacks), `in_stock` (never offers
@@ -63,7 +62,6 @@ scripts/
 notebooks/
   train.ipynb                Colab: baseline -> train -> measure -> push
   serve_check.ipynb          re-scores the adapters as the Space serves them
-results/                     one file per run
 ```
 
 ## Regenerating the data
@@ -76,18 +74,12 @@ python finetuning/scripts/generate_dataset.py --n 900 --seed 42
 python finetuning/scripts/generate_dataset.py --n 900 --seed 42 \
     --templates finetuning/data/templates/blunt.yaml \
     --out finetuning/data/train_blunt.jsonl
-python finetuning/scripts/generate_dataset.py --n 120 --seed 1337 \
-    --exclude finetuning/data/train_friendly.jsonl \
-    --out finetuning/data/eval.jsonl
 python finetuning/scripts/build_eval_hard.py
 
 for f in finetuning/data/*.jsonl; do
     python finetuning/scripts/validate_dataset.py "$f"
 done
 ```
-
-`--exclude` seeds the dedup table from an existing file so no eval dialogue
-appears in training. Without it, 7 of 120 leaked.
 
 ## Training
 
@@ -119,8 +111,6 @@ of whether tone transferred rather than behaviour.
   the checker cannot tell them apart. Nothing downstream trusts prose — the
   order layer works from tool calls it validates itself — but the score is
   softer than the tool-call scores it replaces, and should be read that way.
-- **The generated eval set shares templates with training**, so it measures
-  recall. The hard set is the honest number.
 - **37 examples is small.** Per-category cells hold 3-6 examples, so one wrong
   answer moves a category by 20-33 points. Read the overall figure as the
   result.

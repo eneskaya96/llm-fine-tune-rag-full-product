@@ -56,8 +56,10 @@ Spaces on ZeroGPU with `peft`, where `model.set_adapter("blunt")` is the whole
 of the swap. Same adapter files, different loader.
 
 Measured on the served stack: **14–17 ms** per swap, and the hard-set scores
-move by at most one example against the 4-bit numbers the adapters were trained
-and measured on — see [`serving-check.md`](finetuning/results/serving-check.md).
+moved by at most one example against the 4-bit numbers the adapters were
+trained on. Training runs on a 4-bit base under Unsloth and the Space serves
+unquantised weights through plain `peft`, so that was worth checking rather
+than assuming.
 
 ## Repository
 
@@ -103,8 +105,7 @@ the tool call they emitted — `format_ok`, `valid_slots`, `exact_match` — and
 the best of them reached 91.9% / 94.6% on the hard set. Then the corpus stopped
 teaching tool calls, because teaching them is what makes a new tool a
 retraining job. Those numbers describe a model that was asked a different
-question, so they are kept in [`finetuning/results/`](finetuning/results/) as
-history and quoted nowhere as a result.
+question, so they are not carried forward — the git history has them.
 
 What replaces them reads the reply as prose, on the same 37 hand-written
 dialogues — messy phrasing, vague requests, unavailable sizes, negation,
@@ -129,22 +130,7 @@ measured the prompts as much as the weights. Serving both adapters one prompt
 that says nothing about tone, the difference largely goes.
 
 Teaching tone needs a corpus where the voices differ *only* in what the model
-is trained to say. [The write-up](finetuning/results/serving-check.md) has the
-details.
-
-The three runs behind the retired numbers, each fixing what the last one
-measured:
-
-| | hard-set exact_match | what changed |
-|---|---|---|
-| run 001 | 81.1% | first working adapter |
-| run 002 | 86.5% | +3 ask-instead-of-order categories; broke negation |
-| run 003 | 91.9% / 94.6% | +negation, closing phrases; rebalanced |
-
-Run 002 is the interesting one: fixing over-eagerness produced under-eagerness,
-and `negation` fell below the base model before the rebalance recovered it.
-[`finetuning/results/`](finetuning/results/) records each run including the
-regressions.
+is trained to say.
 
 ## What is not proven
 
