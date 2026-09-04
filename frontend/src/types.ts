@@ -1,10 +1,8 @@
 /**
- * The wire contract, mirroring shared/order_schema.json.
+ * The wire contract: what serving/space/app.py returns, in TypeScript.
  *
- * That file is the single definition of what an order is: the training data
- * emits it, the evaluator scores against it, and serving/space/orders.py
- * validates against it. This is the same shape in TypeScript. Change the JSON
- * schema first, then follow it here.
+ * A cart line is defined by the code that builds it, in
+ * serving/space/orders.py. Change it there first, then follow it here.
  */
 
 export interface OrderItem {

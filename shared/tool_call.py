@@ -1,10 +1,9 @@
-"""How a create_order call is written into an assistant turn, and read back out.
+"""How a tool call is written into an assistant turn, and read back out.
 
-`order_schema.json` says what an order contains; this says how it is wrapped.
-Both halves of the contract live here because three layers depend on them: the
-training data emits this shape, the evaluator scores against it, and the
-serving layer parses it before touching a cart. A second copy in any of those
-places would be a second definition of the format.
+`tools.py` says which calls exist; this says how one is wrapped. Both halves
+live in shared/ because the serving layer writes the list into the prompt and
+parses what comes back, and the frontend renders the result. A second copy in
+either place would be a second definition of the format.
 
 `<tool_call>` is ordinary text in Qwen3's vocabulary, not a special token, so
 it survives `skip_special_tokens=True` and this is a plain text parse.

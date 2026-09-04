@@ -46,12 +46,6 @@ TOOLS = {
     },
 }
 
-# Emitted by the adapters trained before these tools existed. Executed, never
-# advertised. See the module docstring.
-LEGACY = ("create_order",)
-
-KNOWN = tuple(TOOLS) + LEGACY
-
 
 def tool_block():
     """The tools as the system prompt states them.

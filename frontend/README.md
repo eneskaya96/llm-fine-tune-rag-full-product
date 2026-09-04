@@ -5,7 +5,7 @@ React on Vercel, talking to the Hugging Face Space over HTTP.
 ```
 src/App.tsx                 two screens, and the conversation state
 src/api/client.ts           the only file that knows about Gradio
-src/types.ts                mirrors shared/order_schema.json
+src/types.ts                the shapes the Space returns
 src/components/Chat.tsx     customer conversation
 src/components/Cart.tsx     the order as it is validated
 src/components/AdminPanel.tsx  brand voice selector

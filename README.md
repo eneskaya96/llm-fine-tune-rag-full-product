@@ -66,7 +66,7 @@ finetuning/   data generation, training, evaluation      → Colab (T4)
 rag/          catalog → Chroma → <menu> block            → imported by serving
 serving/      base model + adapter hot-swap + API        → HF Space (ZeroGPU)
 frontend/     chat, cart, admin panel                    → Vercel
-shared/       the contracts all three obey: order shape, tool list, prompt
+shared/       the contracts all three obey: tool list, call format, prompt
 ```
 
 Retrieval is why the catalog can be 28 products while the model only ever
@@ -75,11 +75,11 @@ longer one, so [`rag/`](rag/) chooses per turn — keeping anything named earlie
 in the conversation, and leaving sold-out items listed as `OUT OF STOCK` so the
 model can offer the alternative it was trained to offer.
 
-`shared/order_schema.json` is the single source of truth for what an order
-looks like, `shared/tool_call.py` is how a call is written into a reply and
-read back out, and `shared/tools.py` lists the calls that exist. The serving
-layer writes that list into the prompt and validates what comes back; the
-frontend renders the result.
+`shared/tools.py` lists the calls that exist and `shared/tool_call.py` is how
+one is written into a reply and read back out. The serving layer writes that
+list into the prompt and validates what comes back; the frontend renders the
+result. What a cart line contains is defined once, by the code that builds it
+in `serving/space/orders.py`.
 
 **The corpus teaches none of it.** An instruct model already calls a tool it is
 shown, so a tool list baked into weights is a list you have to retrain to
