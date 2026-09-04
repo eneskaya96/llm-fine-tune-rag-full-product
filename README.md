@@ -18,15 +18,23 @@ the agent's steps and an admin voice selector on top.
 | Layer | Owns | Does not own |
 |---|---|---|
 | **RAG** | What exists, what it costs, what is in stock | How to talk |
-| **Fine-tuned model** | Brand voice, when to ask vs order, which tool to call | Any product fact |
+| **Prompt** | Which tools exist, and what each one takes | How to sound |
+| **Fine-tuned model** | Brand voice, when to ask instead of assuming | Any product fact, any tool name |
 | **Code** | Running the tools, and refusing what does not check out | Anything conversational |
 
 The load-bearing idea: **fine-tuning does not teach knowledge.** A menu changes
 weekly; retraining a model on it would be absurd, and the model would still
-hallucinate prices between retrains. So the menu is injected into the prompt at
-request time, and fine-tuning is spent on the things that genuinely are
-stable — how the brand sounds, when to stop and ask, and emitting a tool call
-the code can execute.
+hallucinate prices between retrains. So the menu is injected at request time.
+
+The same argument runs one layer further, and it is the one people skip: **it
+does not teach tools either.** An instruct model already calls a tool it is
+shown in the prompt. Bake the list into weights and every new tool becomes a
+retraining job — and a shop adds a tool far more often than it retrains a
+model. So the tool list is injected at request time too, from
+`shared/tools.py`, and the corpus contains no tool calls at all.
+
+What is left for fine-tuning is what a prompt genuinely cannot carry: how this
+brand sounds, and when to stop and ask.
 
 Every training example therefore invents its own brand and menu. No product
 catalog is stable across the corpus, so the model cannot memorise one. Swap the
@@ -68,39 +76,50 @@ in the conversation, and leaving sold-out items listed as `OUT OF STOCK` so the
 model can offer the alternative it was trained to offer.
 
 `shared/order_schema.json` is the single source of truth for what an order
-looks like, and `shared/tool_call.py` is how it is written into a reply and
-read back out. The training data emits that shape, the evaluator checks against
-it, the serving layer validates it, the frontend renders it.
+looks like, `shared/tool_call.py` is how a call is written into a reply and
+read back out, and `shared/tools.py` lists the calls that exist. The serving
+layer writes that list into the prompt and validates what comes back; the
+frontend renders the result.
 
-**The model's output is not trusted.** The adapters are wrong about roughly one
-order in twelve, so `serving/space/orders.py` checks every item against the
-menu that was actually retrieved for that turn — the same rules the training
-data is validated with — and drops what fails, with the reason shown in the
-cart rather than swallowed. Prices are computed from the catalog, never read
-out of the model's prose. This is what "code owns actually placing the order"
-means in practice.
+**The corpus teaches none of it.** An instruct model already calls a tool it is
+shown, so a tool list baked into weights is a list you have to retrain to
+change — and the shop adds a tool far more often than it retrains a model. What
+the adapters own is the part a prompt cannot carry: how the shop sounds, and
+when it asks instead of assuming. Adding a tool is an entry in
+`shared/tools.py`.
+
+**The model's output is not trusted.** Nothing trains it on what a valid order
+looks like and nothing scores it on one, so `serving/space/orders.py` checks
+every item against the menu that was actually retrieved for that turn —
+product listed, size offered, milk on the list, nothing sold out — and drops
+what fails, with the reason shown in the cart rather than swallowed. Prices are
+computed from the catalog, never read out of the model's prose. This is what
+"code owns actually placing the order" means in practice.
 
 ## Results so far
 
-Measured on 37 hand-written dialogues that share no templates with the training
-data — messy phrasing, vague requests, unavailable sizes, negation, ambiguous
-product names, compound failures, dialogues up to eight turns, customers who
-push back after being told no.
+**None that still stand.** Three runs scored the adapters on the arguments of
+the tool call they emitted — `format_ok`, `valid_slots`, `exact_match` — and
+the best of them reached 91.9% / 94.6% on the hard set. Then the corpus stopped
+teaching tool calls, because teaching them is what makes a new tool a
+retraining job. Those numbers describe a model that was asked a different
+question, so they are kept in [`finetuning/results/`](finetuning/results/) as
+history and quoted nowhere as a result.
 
-The fine-tuned models are scored **without** the tool schema in their prompt.
-The baseline gets it, which is the comparison worth winning: can a fine-tuned
-model beat a well-prompted one while using a shorter prompt?
+What replaces them reads the reply as prose, on the same 37 hand-written
+dialogues — messy phrasing, vague requests, unavailable sizes, negation,
+ambiguous product names, compound failures, dialogues up to eight turns,
+customers who push back after being told no:
 
-| metric | base + schema | friendly | blunt |
-|---|---|---|---|
-| format_ok | 78.4% | 100.0% | 100.0% |
-| restraint | 94.6% | 97.3% | 100.0% |
-| grounded | 100.0% | 100.0% | 100.0% |
-| valid_slots | 88.2% | 95.8% | 100.0% |
-| exact_match | 62.2% | **91.9%** | **94.6%** |
+| metric | passes when |
+|---|---|
+| `grounded` | it names no product that example's menu lacks |
+| `in_stock` | it never offers something the shop has run out of |
+| `one_question` | it asks one thing at a time |
+| `alternative` | when the ask cannot be met, it names something real instead |
 
 Every metric is computed in code against that example's own menu. No LLM judge,
-no human rating.
+no human rating. The retrained adapters have not been measured yet.
 
 **Tone is not among the results.** A classifier separated the two adapters'
 prose 81.1% of the time — but each voice was scored under its own training
@@ -109,12 +128,12 @@ pleasantries."* A base model follows those lines unaided, so the number
 measured the prompts as much as the weights. Serving both adapters one prompt
 that says nothing about tone, the difference largely goes.
 
-So what fine-tuning is shown to have taught is the tool-call format and the
-ordering discipline — neither of which was ever in the prompt. Teaching tone
-needs a corpus where the voices differ *only* in what the model is trained to
-say. [The write-up](finetuning/results/serving-check.md) has the details.
+Teaching tone needs a corpus where the voices differ *only* in what the model
+is trained to say. [The write-up](finetuning/results/serving-check.md) has the
+details.
 
-Three runs, each fixing what the last one measured:
+The three runs behind the retired numbers, each fixing what the last one
+measured:
 
 | | hard-set exact_match | what changed |
 |---|---|---|
@@ -148,13 +167,13 @@ regressions.
 
 ## Next
 
-1. Regenerate the corpus around the agent's tools and retrain. The shipped
-   adapters only ever learned `create_order` — one call carrying a finished
-   order — so `add_item`, `remove_item` and `search_menu` are being asked of
-   weights that have never seen them. The tool list lives in `shared/tools.py`
-   precisely so the corpus and the agent can be taught the same thing. This
-   also folds in the older item: one shared system prompt, so tone measures
-   what the weights learned rather than what the prompt said
+1. Retrain both voices on the voice-only corpus and measure them. Nothing in
+   the shipped adapters matches what the corpus now teaches: they learned
+   `create_order` and were scored on its arguments. Until they are replaced,
+   `serving/space/tools.py` still executes `create_order` so the live Space
+   keeps working, and the four prose metrics have no numbers behind them. The
+   retrain also folds in the older item — one shared system prompt, so tone
+   measures what the weights learned rather than what the prompt said
 2. Take the catalog out of git — a barista cannot open a pull request to mark a
    product sold out. This becomes real once the admin panel writes products
 3. Persist carts and orders. They are in memory today and a Space restart

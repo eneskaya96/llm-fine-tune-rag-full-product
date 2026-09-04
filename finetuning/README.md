@@ -1,8 +1,8 @@
 # Fine-tuning
 
 Two LoRA adapters over one base model, teaching a coffee shop's ordering
-assistant a brand voice and a tool-call format — not product knowledge, which
-belongs to the RAG layer.
+assistant a brand voice — not product knowledge, which belongs to the RAG
+layer, and not which tools exist, which belongs to the prompt.
 
 | | |
 |---|---|
@@ -12,28 +12,38 @@ belongs to the RAG layer.
 | Training | 900 dialogues per voice, 3 epochs, lr 2e-4, effective batch 8, ~31 min |
 | Adapters | [`coffee-order-friendly`](https://huggingface.co/eneskaya96/coffee-order-friendly), [`coffee-order-blunt`](https://huggingface.co/eneskaya96/coffee-order-blunt) |
 
+## What is being taught
+
+The corpus carries **no tool calls at all**. An instruct model already calls a
+tool it is shown in the prompt, so teaching one is at best redundant and at
+worst harmful: weights trained on a fixed list are a list you have to retrain
+to change, and the shop adds a tool more often than it retrains a model.
+
+So the split runs one layer deeper than "fine-tuning does not teach knowledge":
+
+| | owned by |
+|---|---|
+| menu, prices, stock | RAG, at request time |
+| which tools exist | the prompt, at request time |
+| how the shop sounds, when it asks rather than assumes | **the adapter** |
+| running the call, checking it, pricing it | code |
+
+Adding a tool is an entry in `shared/tools.py`. Nothing is retrained.
+
 ## Result
 
-Hard set: 37 hand-written dialogues, no shared templates with training data.
-The fine-tuned models are scored **without** the tool schema in their prompt;
-the baseline gets it.
+Not yet measured. The adapters in production were trained on the earlier
+corpus, which did teach `create_order`, and were scored on metrics that read
+its arguments — `format_ok`, `valid_slots`, `exact_match`. Those numbers are
+in [`results/`](results/) as history; none of them describes what is measured
+now, so none is quoted here.
 
-| metric | base + schema | friendly | blunt |
-|---|---|---|---|
-| format_ok | 78.4% | 100.0% | 100.0% |
-| restraint | 94.6% | 97.3% | 100.0% |
-| grounded | 100.0% | 100.0% | 100.0% |
-| valid_slots | 88.2% | 95.8% | 100.0% |
-| exact_match | 62.2% | **91.9%** | **94.6%** |
-
-Across three runs: 81.1% → 86.5% → 91.9%. Each run's write-up in
-[`results/`](results/) records what changed, what it fixed, and what it broke.
-
-Re-measured on the stack the Space actually runs — unquantised weights, plain
-`peft`, no Unsloth — every metric lands within one or two examples of the table
-above, and the voice swap costs 14–17 ms. The tone measurement from the same
-run turned out confounded and is not a result;
-[`results/serving-check.md`](results/serving-check.md) says why.
+The metrics that replace them read the prose, which is the part an adapter
+owns: `grounded` (names no product this menu lacks), `in_stock` (never offers
+what the shop has run out of), `one_question` (asks one thing at a time),
+`alternative` (when the ask cannot be met, names something real instead). Tone
+is scored separately by `tone_eval.py` — a classifier that has to tell the two
+voices apart from the words alone.
 
 ## Layout
 
@@ -47,9 +57,9 @@ data/
 scripts/
   generate_dataset.py        templates -> training corpus
   build_eval_hard.py         eval_hard.yaml -> eval_hard.jsonl
-  validate_dataset.py        every record checked against its own menu
-  evaluate.py                scores model output; the notebook imports this
-  tone_eval.py               scores prose rather than orders
+  validate_dataset.py        the rules, checked over the corpus
+  evaluate.py                the same rules, over model output
+  tone_eval.py               scores how it was said, not what was said
 notebooks/
   train.ipynb                Colab: baseline -> train -> measure -> push
   serve_check.ipynb          re-scores the adapters as the Space serves them
@@ -104,12 +114,16 @@ of whether tone transferred rather than behaviour.
 
 ## Known limitations
 
-- **The generated eval set is close to saturated** (98.3%) because it shares
-  templates with training. The hard set is the honest number.
+- **The metrics read prose, and prose can lie.** "We don't have cold brew" and
+  "here is your cold brew" both name a product the customer already named, and
+  the checker cannot tell them apart. Nothing downstream trusts prose — the
+  order layer works from tool calls it validates itself — but the score is
+  softer than the tool-call scores it replaces, and should be read that way.
+- **The generated eval set shares templates with training**, so it measures
+  recall. The hard set is the honest number.
 - **37 examples is small.** Per-category cells hold 3-6 examples, so one wrong
-  answer moves a category by 20-33 points. Both adapters diverge by up to 40
-  points per category while landing within one example of each other overall —
-  most of that spread is noise. Read the overall figure as the result.
+  answer moves a category by 20-33 points. Read the overall figure as the
+  result.
 - **The voices differ in their system prompt, not only their weights.** That
   makes the tone score uninterpretable — a base model would follow "Be blunt.
   No pleasantries." on its own. The prompt belongs in `_shared.yaml` so every

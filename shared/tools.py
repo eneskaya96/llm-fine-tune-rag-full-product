@@ -1,15 +1,16 @@
 """What the agent is allowed to do, described once.
 
 `tool_call.py` says how a call is written; this says which calls exist and what
-they carry. It lives in shared/ for the same reason the rest of that folder
-does: the corpus generator has to teach exactly the tools the serving layer
-executes, and a second list in either place is a second definition that drifts.
+they carry. The list reaches the model as prompt, never as weights: the corpus
+teaches no tool calls at all, so adding a tool here is the whole change, with
+no retraining behind it. That is the point of keeping it in one file -- a
+second list anywhere is a second definition that drifts.
 
-`create_order` is not here. It is what the adapters emit today -- one call at
-the confirmation turn holding the whole order -- and tools.run still accepts it,
-but advertising it in the prompt would teach a retrained model the shape we are
-moving away from. The compatibility path is in the executor, not in the
-contract.
+`create_order` is not here. It is the single call carrying a finished order
+that the adapters in production were trained on, back when the corpus taught
+tool calls; tools.run still accepts it so the live Space keeps working. It goes
+when those adapters are replaced. The compatibility path is in the executor,
+not in the contract.
 """
 
 TOOLS = {

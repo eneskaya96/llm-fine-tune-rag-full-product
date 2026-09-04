@@ -1,16 +1,22 @@
 """Score model output against the held-out set.
 
-The checks are the ones validate_dataset.py already applies to the corpus, now
-pointed at what the model generated instead. Each eval example is replayed up to
-its final assistant turn; the model produces that turn; we compare.
+The checks are the ones validate_dataset.py applies to the corpus, pointed at
+what the model generated instead. Each eval example is replayed up to its final
+assistant turn; the model produces that turn; we read it.
+
+Everything scored here is prose, because prose is what fine-tuning owns. Which
+tool to call is read off the <tools> block in the prompt and executed by code
+that validates the call -- scoring the model on it would be scoring the prompt,
+and would go stale the day the shop adds a tool. A tool call in the output is
+therefore stripped before scoring rather than punished: the served prompt does
+advertise tools, so a reply may legitimately carry one.
 
 Metrics
 -------
-format_ok    output parses -- a tool call is well-formed JSON when one is due
-restraint    no order emitted for questions and off-menu requests
-grounded     ordered products exist on that example's menu
-valid_slots  size and milk are offered, nothing out of stock
-exact_match  order items identical to the reference (the strict one)
+grounded      names no product that is absent from that example's menu
+in_stock      never offers something the menu marks OUT OF STOCK
+one_question  asks at most one thing in a turn
+alternative   when the ask cannot be met, names a real product instead
 """
 
 import json
@@ -23,58 +29,13 @@ import sys
 # validate_dataset's import doing it first, which would make the order of these
 # two lines load-bearing.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent.parent))
+from shared.tool_call import strip_tool_calls  # noqa: E402
 from shared.tools import tool_block  # noqa: E402
-from validate_dataset import extract_tool_calls, parse_menu  # noqa: E402
-
-NO_ORDER = {"off_menu_request", "price_question_no_order"}
-
+from validate_dataset import (METRICS, mentions, offers,  # noqa: E402
+                              parse_menu, score_reply, wants_alternative)
 
 SHARED = pathlib.Path(__file__).resolve().parent.parent.parent / "shared"
-SCHEMA_PATH = SHARED / "order_schema.json"
 NEUTRAL_PROMPT_PATH = SHARED / "system_prompt.txt"
-
-# The prompt text below is hand-formatted for the model to read, while
-# shared/order_schema.json is the machine-readable contract the serving layer
-# and frontend use. Rewording the prompt changes what the base model is scored
-# against, so the two are kept as separate renderings of one contract and
-# checked for drift at import rather than generated from each other.
-TOOL_SCHEMA = """
-
-You have one tool:
-
-<tools>
-{"name": "create_order", "description": "Place the customer's order.",
- "parameters": {"type": "object", "properties": {"items": {"type": "array", "items":
- {"type": "object", "properties": {
-   "name": {"type": "string", "description": "exact product name from the menu"},
-   "size": {"type": "string", "enum": ["S", "M", "L"], "description": "null for food"},
-   "milk": {"type": "string", "description": "null unless the customer asked"},
-   "extras": {"type": "array", "items": {"type": "string"}},
-   "quantity": {"type": "integer"}},
-  "required": ["name", "size", "milk", "extras", "quantity"]}}},
- "required": ["items"]}}
-</tools>
-
-Call it by writing exactly:
-<tool_call>
-{"name": "create_order", "arguments": {"items": [...]}}
-</tool_call>"""
-
-
-def _check_schema_drift():
-    """Fail loudly if the prompt text and the shared contract disagree."""
-    if not SCHEMA_PATH.exists():
-        return
-    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    fields = set(schema["parameters"]["properties"]["items"]["items"]["properties"])
-    missing = [f for f in fields if f'"{f}"' not in TOOL_SCHEMA]
-    if missing or schema["name"] not in TOOL_SCHEMA:
-        raise AssertionError(
-            f"TOOL_SCHEMA has drifted from {SCHEMA_PATH.name}: missing {missing}")
-
-
-_check_schema_drift()
-
 
 BRAND_LINE = re.compile(r"You are the ordering assistant for (.+?)\.")
 MENU_BLOCK = re.compile(r"<menu>\n(.*?)\n</menu>", re.DOTALL)
@@ -98,95 +59,37 @@ def neutral_system(record):
     template = NEUTRAL_PROMPT_PATH.read_text(encoding="utf-8")
     # The tools come from shared/tools.py for the same reason the prompt comes
     # from shared/: this has to be the prompt the Space serves, or the scores
-    # describe something nobody is running.
+    # describe something nobody is running. No adapter was trained on a <tools>
+    # block, which is the point -- the tool list is prompt, not weights.
     return template.format(brand=brand.group(1), menu=menu.group(1),
                            tools=tool_block())
 
 
-def prompt_messages(record, tool_schema=False, neutral=False):
+def prompt_messages(record, neutral=False):
     """Everything up to (not including) the final assistant turn.
-
-    The training prompt names create_order but never defines it -- the tuned
-    model learns the schema from weights. A base model cannot, so scoring it on
-    that prompt measures the omission rather than the model. Pass
-    tool_schema=True to give it the definition and get a fair baseline.
 
     neutral=True replaces the voice's system prompt with the shared one, which
     is the ablation that tells tone in the weights from tone in the prompt.
     """
     messages = record["messages"][:-1]
-    head = messages[0]
-    if neutral:
-        head = dict(head, content=neutral_system(record))
-    if tool_schema:
-        head = dict(head, content=head["content"] + TOOL_SCHEMA)
-    if head is messages[0]:
+    if not neutral:
         return messages
-    return [head] + messages[1:]
-
-
-def reference_items(record):
-    calls, _ = extract_tool_calls(record["messages"][-1]["content"])
-    return [i for c in calls for i in c.get("arguments", {}).get("items", [])]
-
-
-def expects_order(record):
-    """Whether a correct answer places an order.
-
-    The hard set states this per record, since cases like an ambiguous product
-    name or an unavailable size call for a question rather than an order and
-    cannot be read off the category alone.
-    """
-    meta = record["meta"]
-    if "expects_order" in meta:
-        return meta["expects_order"]
-    return meta["category"] not in NO_ORDER
+    return [dict(messages[0], content=neutral_system(record))] + messages[1:]
 
 
 def score_one(record, output):
-    """Return a dict of pass/fail flags for one generated turn."""
+    """Return a verdict per metric for one generated turn."""
     menu = parse_menu(record["messages"][0]["content"])
-    calls, malformed = extract_tool_calls(output)
-    items = [i for c in calls if c.get("name") == "create_order"
-             for i in c.get("arguments", {}).get("items", [])]
+    asked, offered = set(), False
+    for message in record["messages"][1:-1]:
+        if message["role"] == "user":
+            asked |= mentions(message["content"], menu["brand"])
+        else:
+            offered = offered or bool(offers(message["content"], menu, asked))
 
-    should_order = expects_order(record)
-    # grounded and valid_slots are None when no order was emitted: a model that
-    # never orders anything would otherwise score 100% on both.
-    result = {
-        "format_ok": malformed == 0 and (bool(items) if should_order else True),
-        "restraint": not items if not should_order else True,
-        "grounded": True if items else None,
-        "valid_slots": True if items else None,
-        "exact_match": False,
-    }
-
-    for entry in items:
-        product = menu["products"].get(str(entry.get("name", "")).lower())
-        if product is None:
-            result["grounded"] = False
-            continue
-        if not product["in_stock"]:
-            result["valid_slots"] = False
-        size = entry.get("size")
-        if product["sizes"] and size not in product["sizes"]:
-            result["valid_slots"] = False
-        milk = entry.get("milk")
-        if milk is not None and milk not in menu["milks"]:
-            result["valid_slots"] = False
-
-    def key(entries):
-        return sorted(
-            (str(e.get("name", "")).lower(), e.get("size"), e.get("milk"),
-             tuple(sorted(e.get("extras") or [])), e.get("quantity", 1))
-            for e in entries
-        )
-
-    result["exact_match"] = key(items) == key(reference_items(record))
-    return result
-
-
-METRICS = ["format_ok", "restraint", "grounded", "valid_slots", "exact_match"]
+    needs = wants_alternative(record["meta"]["category"], menu, asked, offered)
+    verdicts, _ = score_reply(strip_tool_calls(output), menu, asked, needs)
+    return verdicts
 
 
 def _rate(bucket, metric):
@@ -230,12 +133,12 @@ def format_table(summary, label="model"):
         value = summary["overall"][metric]
         lines.append(f"  {metric:12} {'n/a' if value is None else f'{value:6.1%}'}")
     lines.append("")
-    lines.append(f"  {'category':26} {'n':>4}  {'fmt':>5} {'grnd':>5} {'slot':>5} {'exact':>5}")
+    lines.append(f"  {'category':26} {'n':>4}  "
+                 f"{'grnd':>5} {'stock':>5} {'1 q':>5} {'alt':>5}")
     for category, bucket in sorted(summary["per_category"].items()):
         lines.append(
             f"  {category:26} {bucket['n']:>4}  "
-            + " ".join(_cell(_rate(bucket, m))
-                       for m in ("format_ok", "grounded", "valid_slots", "exact_match")))
+            + " ".join(_cell(_rate(bucket, m)) for m in METRICS))
     return "\n".join(lines)
 
 

@@ -1,5 +1,5 @@
 {
-  "$comment": "Canonical create_order contract. Every layer conforms to this: the training data emits it, the evaluator checks against it, the serving layer parses and executes it, and the frontend renders it. Change it here first.",
+  "$comment": "Canonical create_order contract. The serving layer parses and executes it and the frontend renders it; the corpus does not teach it and the evaluator does not score it, because which tools exist is prompt rather than weights. Change it here first.",
   "name": "create_order",
   "description": "Place the customer's order.",
   "parameters": {

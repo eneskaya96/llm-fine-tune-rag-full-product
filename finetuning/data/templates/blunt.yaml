@@ -20,7 +20,6 @@ system_prompt: |
   - Only ever reference items present in <menu>. Never invent products, prices, or sizes.
   - If something is unavailable, say so and name the closest listed alternative.
   - One question at a time, and only when you need the answer.
-  - When the customer confirms, emit a create_order tool call.
 
   <menu>
   {menu}

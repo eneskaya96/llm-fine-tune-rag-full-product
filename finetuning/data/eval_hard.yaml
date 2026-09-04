@@ -5,8 +5,9 @@
 # templates produce, so the score measures generalisation rather than template
 # recall.
 #
-# `expects_order: false` marks the cases where a correct assistant emits no
-# tool call -- it asks, refuses, or answers instead.
+# The assistant turns are speech. What the model is scored on is whether it
+# talks about this menu and no other, offers a real alternative when the ask
+# cannot be met, and asks one thing at a time.
 #
 # Compiled to data/eval_hard.jsonl by scripts/build_eval_hard.py.
 
@@ -21,9 +22,6 @@
   turns:
     - user: "lemme get 2 med lattes n a muffin"
     - assistant: "Two medium lattes and a blueberry muffin — got it."
-      order:
-        - {name: Latte, size: M, quantity: 2}
-        - {name: Blueberry Muffin}
 
 - category: messy_phrasing
   brand: Dovetail Roasters
@@ -36,8 +34,6 @@
   turns:
     - user: "hi!! can i pls get a lrg cold brew ☕ thx"
     - assistant: "Of course, one large cold brew."
-      order:
-        - {name: Cold Brew, size: L}
 
 - category: messy_phrasing
   brand: Pinegate Coffee House
@@ -50,8 +46,6 @@
   turns:
     - user: "americano. large. thats it"
     - assistant: "One large americano."
-      order:
-        - {name: Americano, size: L}
 
 - category: messy_phrasing
   brand: Barrow & Finch
@@ -64,9 +58,6 @@
   turns:
     - user: "gimme a mocha medium and throw in a brownie"
     - assistant: "One medium mocha and a brownie."
-      order:
-        - {name: Mocha, size: M}
-        - {name: Brownie}
 
 - category: messy_phrasing
   brand: Halloway Coffee Bar
@@ -79,8 +70,6 @@
   turns:
     - user: "chai latte pls — the big one — w oat"
     - assistant: "One large chai latte with oat milk."
-      order:
-        - {name: Chai Latte, size: L, milk: oat}
 
 - category: messy_phrasing
   brand: Foxglove Espresso Bar
@@ -93,8 +82,6 @@
   turns:
     - user: "ill take an iced coffee, whatever size is bigger"
     - assistant: "One large iced coffee."
-      order:
-        - {name: Iced Coffee, size: L}
 
 - category: vague_request
   brand: Sable Coffee Co.
@@ -109,7 +96,6 @@
     - user: "something cold, not too sweet"
     - assistant: "Cold brew or iced tea would both fit — neither is sweet unless
         we add syrup. Which sounds better?"
-  expects_order: false
 
 - category: vague_request
   brand: Windrow Roasters
@@ -123,7 +109,6 @@
     - user: "I need something really strong, I barely slept"
     - assistant: "An espresso is the strongest thing we pour, or a drip coffee
         with an extra shot if you want more volume. Which way?"
-  expects_order: false
 
 - category: vague_request
   brand: Quarrystone Coffee
@@ -137,7 +122,6 @@
   turns:
     - user: "got anything without caffeine?"
     - assistant: "Our herbal tea is caffeine-free. Would you like one?"
-  expects_order: false
 
 - category: vague_request
   brand: Cobblefield Cafe
@@ -151,7 +135,6 @@
     - user: "what's good here?"
     - assistant: "The mocha is a favourite, and the butter croissant goes well
         with it. Want me to start with either?"
-  expects_order: false
 
 - category: vague_request
   brand: Larkfield Brew House
@@ -165,7 +148,6 @@
     - user: "just coffee, surprise me"
     - assistant: "I'll pour you a medium flat white then — our house standard.
         Sound alright?"
-  expects_order: false
 
 - category: invalid_size
   brand: Marrowbone Coffee
@@ -179,7 +161,6 @@
     - user: "extra large latte please"
     - assistant: "Large is the biggest we do — that's our top size. Shall I make
         it a large?"
-  expects_order: false
 
 - category: invalid_size
   brand: Thornbury Coffee Co.
@@ -193,7 +174,6 @@
     - user: "a large cortado"
     - assistant: "Cortados only come in small and medium. Medium is the closest
         — want that?"
-  expects_order: false
 
 - category: invalid_size
   brand: Ashcombe Roasters
@@ -207,7 +187,6 @@
     - user: "medium espresso"
     - assistant: "Espresso comes as a single size only. Want a double shot
         instead, or a medium cappuccino?"
-  expects_order: false
 
 - category: negation
   brand: Grayling Coffee
@@ -220,8 +199,6 @@
   turns:
     - user: "large mocha but no syrup at all"
     - assistant: "One large mocha, no syrup."
-      order:
-        - {name: Mocha, size: L}
 
 - category: negation
   brand: Ravensmoor Cafe
@@ -234,8 +211,6 @@
   turns:
     - user: "medium flat white, decaf, and not oat milk — regular is fine"
     - assistant: "One medium flat white, decaf, with whole milk."
-      order:
-        - {name: Flat White, size: M, milk: whole, extras: [decaf]}
 
 - category: negation
   brand: Hollowbrook Coffee
@@ -248,8 +223,6 @@
   turns:
     - user: "chai latte, medium. no cinnamon on top please"
     - assistant: "One medium chai latte, no cinnamon."
-      order:
-        - {name: Chai Latte, size: M}
 
 - category: negation
   brand: Everlyn Coffee Bar
@@ -262,8 +235,6 @@
   turns:
     - user: "small cappuccino, and I don't want anything to eat"
     - assistant: "Just the small cappuccino then."
-      order:
-        - {name: Cappuccino, size: S}
 
 - category: quantity_edge
   brand: Sedgewick Roasters
@@ -276,8 +247,6 @@
   turns:
     - user: "half a dozen medium drip coffees for the office"
     - assistant: "Six medium drip coffees coming up."
-      order:
-        - {name: Drip Coffee, size: M, quantity: 6}
 
 - category: quantity_edge
   brand: Kestrel Lane Coffee
@@ -290,9 +259,6 @@
   turns:
     - user: "a couple of large lattes and three scones"
     - assistant: "Two large lattes and three scones."
-      order:
-        - {name: Latte, size: L, quantity: 2}
-        - {name: Cheese Scone, quantity: 3}
 
 - category: quantity_edge
   brand: Underhill Coffee
@@ -305,8 +271,6 @@
   turns:
     - user: "one americano for me, one for my colleague, both large"
     - assistant: "Two large americanos."
-      order:
-        - {name: Americano, size: L, quantity: 2}
 
 - category: ambiguous_match
   brand: Wren & Willow
@@ -320,7 +284,6 @@
   turns:
     - user: "medium iced please"
     - assistant: "We have iced coffee and iced tea — which did you mean?"
-  expects_order: false
 
 # No plain "Latte" on this menu: with one present, answering "latte" with it is
 # an exact match, not a guess, and the example would test nothing.
@@ -336,7 +299,6 @@
   turns:
     - user: "one latte, medium"
     - assistant: "Chai, matcha, or turmeric? Those are the lattes we pour."
-  expects_order: false
 
 - category: ambiguous_match
   brand: Fernhollow Coffee
@@ -352,8 +314,6 @@
     - assistant: "Regular or nitro? Both come in large."
     - user: "nitro"
     - assistant: "One large nitro cold brew."
-      order:
-        - {name: Nitro Cold Brew, size: L}
 
 - category: ambiguous_match
   brand: Bellwether Espresso
@@ -367,7 +327,6 @@
   turns:
     - user: "a tea please"
     - assistant: "Green, herbal, or earl grey?"
-  expects_order: false
 
 - category: compound_difficulty
   brand: Ironwood Coffee Co.
@@ -384,9 +343,6 @@
         Want a large iced coffee with the brownie?"
     - user: "yeah fine. actually make the iced coffee a medium"
     - assistant: "One medium iced coffee and a brownie."
-      order:
-        - {name: Iced Coffee, size: M}
-        - {name: Brownie}
 
 - category: compound_difficulty
   brand: Netherby Roasters
@@ -403,9 +359,6 @@
         nearest — shall I do that?"
     - user: "ok but large, and add a cinnamon roll"
     - assistant: "One large chai latte with oat milk and a cinnamon roll."
-      order:
-        - {name: Chai Latte, size: L, milk: oat}
-        - {name: Cinnamon Roll}
 
 - category: compound_difficulty
   brand: Aldergate Coffee
@@ -418,13 +371,10 @@
     Milk options: whole, almond (+0.50)
   turns:
     - user: "two large drip coffees"
-    - assistant: "Drip coffee is out today. I could do large americanos —
-        oh, we don't have those either. Large cappuccinos are the closest.
-        Want two of those?"
+    - assistant: "Drip coffee is out today. Large cappuccinos are the
+        closest — want two of those?"
     - user: "make it one, with almond milk"
     - assistant: "One large cappuccino with almond milk."
-      order:
-        - {name: Cappuccino, size: L, milk: almond}
 
 - category: compound_difficulty
   brand: Fenwick Brew House
@@ -440,8 +390,6 @@
     - assistant: "One large hot chocolate and one large mocha — anything else?"
     - user: "actually drop the mocha, and make the hot chocolate medium"
     - assistant: "Just the medium hot chocolate then."
-      order:
-        - {name: Hot Chocolate, size: M}
 
 - category: compound_difficulty
   brand: Skelbrook Coffee
@@ -456,8 +404,6 @@
     - assistant: "Cortados come in small or medium only. Medium with soy?"
     - user: "sure, and add an extra shot"
     - assistant: "One medium cortado with soy milk and an extra shot."
-      order:
-        - {name: Cortado, size: M, milk: soy, extras: [extra shot]}
 
 - category: long_dialogue
   brand: Portbury Coffee Bar
@@ -477,9 +423,6 @@
     - assistant: "One medium latte with oat milk. Anything else?"
     - user: "yeah a muffin. and actually add a shot to the latte"
     - assistant: "One medium oat latte with an extra shot, plus a blueberry muffin."
-      order:
-        - {name: Latte, size: M, milk: oat, extras: [extra shot]}
-        - {name: Blueberry Muffin}
 
 - category: long_dialogue
   brand: Chalkwell Roasters
@@ -498,9 +441,6 @@
     - assistant: "One medium cappuccino — anything with it?"
     - user: "a scone, thanks"
     - assistant: "One medium cappuccino and a cheese scone."
-      order:
-        - {name: Cappuccino, size: M}
-        - {name: Cheese Scone}
 
 - category: long_dialogue
   brand: Ivybridge Coffee
@@ -520,10 +460,6 @@
     - assistant: "Adding a medium iced tea. That everything?"
     - user: "yes"
     - assistant: "A small flat white, a large flat white, and a medium iced tea."
-      order:
-        - {name: Flat White, size: S}
-        - {name: Flat White, size: L}
-        - {name: Iced Tea, size: M}
 
 - category: long_dialogue
   brand: Rushmere Coffee Co.
@@ -542,8 +478,6 @@
     - assistant: "One large hot chocolate with caramel syrup. Anything else?"
     - user: "no that's it"
     - assistant: "One large hot chocolate with caramel syrup."
-      order:
-        - {name: Hot Chocolate, size: L, extras: [caramel syrup]}
 
 - category: off_menu_pressure
   brand: Belhaven Coffee
@@ -560,7 +494,6 @@
     - user: "come on, you must be able to do it"
     - assistant: "Afraid not — caramel isn't something we stock. The latte with
         vanilla is genuinely the nearest thing."
-  expects_order: false
 
 - category: off_menu_pressure
   brand: Wrenfield Roasters
@@ -576,7 +509,6 @@
     - user: "can you put something in the bagel?"
     - assistant: "We serve them plain only. I can add a bagel to your order if
         you'd like it as-is."
-  expects_order: false
 
 - category: off_menu_pressure
   brand: Ordsall Coffee House
@@ -593,4 +525,3 @@
     - user: "no latte at all? seriously?"
     - assistant: "Seriously — we're a filter and espresso shop. Large drip
         coffee if you want something long, espresso if you want it short."
-  expects_order: false

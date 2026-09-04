@@ -59,11 +59,15 @@ speak ──has a tool call?──► act ──terminal, or 3rd turn?──► 
 | `confirm_order` | places the cart |
 
 `create_order` is the fifth: one call carrying a whole order, which is what the
-adapters in production were trained to emit. It is executed but not advertised,
-so the shipped weights keep working while a retrained model learns the
-incremental tools instead. That retraining is the real work left — the corpus
-these adapters learned from contains `create_order` and nothing else, so an
-agent loop is asking them for something they have never seen.
+adapters in production were trained to emit back when the corpus taught tool
+calls at all. It is executed but not advertised, so the shipped weights keep
+working; it goes when they are replaced.
+
+The corpus teaches no tool calls now. An instruct model calls a tool it is
+shown in the prompt, and weights trained on a fixed list are a list you retrain
+to change — the shop adds a tool far more often than it retrains a model. The
+four tools above reach the model as prompt, from `shared/tools.py`, on every
+turn. Adding a fifth is an entry in that file.
 
 It is a `StateGraph` rather than a `while` loop because the stopping rules are
 then edges you can read off the page, and because the conversation will want a
@@ -75,12 +79,14 @@ seconds.
 
 ## Why the model's output is not trusted
 
-The adapters score 100% on format and about 92% on exact match — another way of
-saying they are wrong about one order in twelve. `orders.py` checks every item
-against the menu that was actually retrieved for that turn, using the same
-rules `validate_dataset.py` applies to the training data, and refuses what
-fails with a reason instead of silently correcting it. Prices are computed from
-the catalog, never read out of the model's prose.
+Nothing teaches the model what a valid order looks like any more, and nothing
+scores it on one: the corpus is prose, and so are the metrics. That is not a
+gap — it moves the whole burden here, which is where it always belonged.
+`orders.py` checks every item against the menu that was actually retrieved for
+that turn — product listed, size offered for that product, milk on the shop's
+list, nothing sold out — and refuses what fails with a reason instead of
+silently correcting it. Prices are computed from the catalog, never read out of
+the model's prose.
 
 This is the layer the architecture calls "code owns actually placing the
 order", and the loop is what makes the refusal useful: the reason goes back to

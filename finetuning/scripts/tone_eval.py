@@ -1,8 +1,9 @@
 """Measure whether two adapters actually speak differently.
 
-Behaviour metrics (evaluate.py) are tone-blind on purpose: exact_match compares
-order items, not prose, so a voice swap must not move them. This module scores
-the prose instead, on generations from the same prompts.
+Behaviour metrics (evaluate.py) are tone-blind on purpose: grounding and
+restraint are the same job whichever voice is speaking, so a voice swap must
+not move them. This module scores how it was said instead, on generations from
+the same prompts.
 
 Two readings:
 

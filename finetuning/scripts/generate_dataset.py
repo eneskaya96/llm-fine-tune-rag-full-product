@@ -153,22 +153,19 @@ def substitutes_for(family, menu, rng, limit=1):
 
 
 # --------------------------------------------------------------------------
-# Order emission
+# Turns
 # --------------------------------------------------------------------------
 
-def item(name, size=None, milk=None, extras=None, quantity=1):
-    return {"name": name, "size": size, "milk": milk,
-            "extras": extras or [], "quantity": quantity}
+def say(text):
+    """One assistant turn. Speech, and only speech.
 
-
-def order_call(items):
-    payload = {"name": "create_order", "arguments": {"items": items}}
-    return "<tool_call>\n" + json.dumps(payload) + "\n</tool_call>"
-
-
-def say(text, items=None):
-    """One assistant turn, optionally carrying an order."""
-    return ("assistant", text if items is None else text + "\n" + order_call(items))
+    No tool call is ever written into this corpus. Which tools exist is read off
+    the <tools> block the serving layer puts in the prompt, and a tool the
+    weights have never seen is exactly what has to keep working the day the shop
+    adds one. What the corpus teaches is the part a prompt cannot carry: how
+    this brand sounds, and when it asks instead of assuming.
+    """
+    return ("assistant", text)
 
 
 # --------------------------------------------------------------------------
@@ -194,17 +191,16 @@ def simple_order(rng, menu, cat):
 
     return [
         ("user", ask),
-        say(fill(rng, cat["assistant"], **slots), [item(drink["name"], size=size)]),
+        say(fill(rng, cat["assistant"], **slots)),
     ]
 
 
 def negation(rng, menu, cat):
-    """Customer rules something out. That is a complete request: order it."""
+    """Customer rules something out. That is a complete request, not a question."""
     drink = rng.choice(available(menu))
     size = rng.choice(drink["sizes"])
     text = describe(drink["name"], size)
     slots = {"d": text, "ad": with_article(text)}
-    order = [item(drink["name"], size=size)]
 
     modes = ["extra"] * bool(menu["extras"]) + ["food"] * bool(menu["food"])
     alternatives = [m for m in menu["milks"] if m != "whole"]
@@ -214,22 +210,21 @@ def negation(rng, menu, cat):
 
     mode = rng.choice(modes)
     if mode == "extra":
-        # The ruled-out extra is simply absent from the order.
+        # The ruled-out extra must simply not come back in the reply.
         excluded = rng.choice(menu["extras"])
         user_key, reply_key = "user", "assistant"
         slots["no"] = excluded
     elif mode == "food":
         user_key, reply_key = "user_nofood", "assistant_nofood"
     else:
-        # Naming the default milk means recording it, not leaving it null.
+        # Turning a milk down still names one: the house milk, said out loud.
         slots["no_milk"] = rng.choice(alternatives)
         slots["milk"] = "whole"
         user_key, reply_key = "user_milk", "assistant_milk"
-        order = [item(drink["name"], size=size, milk="whole")]
 
     return [
         ("user", fill(rng, cat[user_key], **slots)),
-        say(fill(rng, cat[reply_key], **slots), order),
+        say(fill(rng, cat[reply_key], **slots)),
     ]
 
 
@@ -246,8 +241,7 @@ def clarify_missing_size(rng, menu, cat):
         ("user", fill(rng, cat["user"], d=bare, ad=with_article(bare))),
         say(fill(rng, cat["question"], sizes=words)),
         ("user", fill(rng, cat["answer"], s=SIZE_WORD[size])),
-        say(fill(rng, cat["close"], d=full, ad=with_article(full)),
-            [item(drink["name"], size=size)]),
+        say(fill(rng, cat["close"], d=full, ad=with_article(full))),
     ]
 
 
@@ -257,24 +251,20 @@ def multi_item(rng, menu, cat):
     size = rng.choice(drink["sizes"])
     quantity = rng.choice([1, 1, 2, 2, 3])
 
-    items = [item(drink["name"], size=size, quantity=quantity)]
     spoken = [describe(drink["name"], size, quantity=quantity)]
 
     if menu["food"] and rng.random() < 0.6:
         snack = rng.choice(menu["food"])
-        items.append(item(snack["name"]))
         spoken.append(with_article(snack["name"].lower()))
     else:
         others = [d for d in pool if d["name"] != drink["name"]] or pool
         second = rng.choice(others)
-        second_size = rng.choice(second["sizes"])
-        items.append(item(second["name"], size=second_size))
-        spoken.append(describe(second["name"], second_size))
+        spoken.append(describe(second["name"], rng.choice(second["sizes"])))
 
     joined = " and ".join(spoken)
     return [
         ("user", fill(rng, cat["user"], j=joined)),
-        say(fill(rng, cat["assistant"], j=joined), items),
+        say(fill(rng, cat["assistant"], j=joined)),
     ]
 
 
@@ -295,13 +285,12 @@ def out_of_stock(rng, menu, cat):
         say(fill(rng, cat["apology"], gone=gone["name"].lower(),
                  an=with_article(offer), alt=offer)),
         ("user", rng.choice(cat["accept"])),
-        say(fill(rng, cat["close"], alt=offer, an=with_article(offer)),
-            [item(alt["name"], size=alt_size)]),
+        say(fill(rng, cat["close"], alt=offer, an=with_article(offer))),
     ]
 
 
 def off_menu_request(rng, menu, cat):
-    """No tool call: the item does not exist and must not be invented."""
+    """The item does not exist on any menu and must not be invented."""
     wanted = rng.choice(menu["off_menu"])
     picks = substitutes_for(wanted["family"], menu, rng, limit=2)
     if not picks:
@@ -331,13 +320,12 @@ def order_correction(rng, menu, cat):
         say(fill(rng, cat["ack"], d=before)),
         ("user", fill(rng, cat["change"], s=SIZE_WORD[last], a2=with_article(extra))),
         say(fill(rng, cat["close"], d=after, ad=with_article(after),
-                 a2=with_article(extra)),
-            [item(drink["name"], size=last), item(second["name"], size=second_size)]),
+                 a2=with_article(extra))),
     ]
 
 
 def price_question_no_order(rng, menu, cat):
-    """No tool call: a question is not an order."""
+    """A question is not an order."""
     drink = rng.choice(available(menu))
     size = rng.choice(drink["sizes"])
     text = describe(drink["name"], size)
@@ -361,8 +349,7 @@ def customisation(rng, menu, cat):
     slots = {"d": text, "ad": with_article(text)}
     return [
         ("user", fill(rng, cat["user"], **slots)),
-        say(fill(rng, cat["assistant"], **slots),
-            [item(drink["name"], size=size, milk=milk, extras=chosen)]),
+        say(fill(rng, cat["assistant"], **slots)),
     ]
 
 
@@ -395,12 +382,11 @@ def invalid_size(rng, menu, cat):
                  offered=offered, closest=SIZE_WORD[closest])),
     ]
     # Half stop at the refusal, half carry through to the corrected order, so
-    # the model does not learn that this shape always ends in a tool call.
+    # the model does not learn that this shape always ends in agreement.
     if rng.random() < 0.5:
         turns += [
             ("user", rng.choice(cat["accept"])),
-            say(fill(rng, cat["close"], full=full),
-                [item(drink["name"], size=closest)]),
+            say(fill(rng, cat["close"], full=full)),
         ]
     return turns
 
@@ -443,14 +429,13 @@ def ambiguous_match(rng, menu, cat):
         full = describe(chosen["name"], size)
         turns += [
             ("user", fill(rng, cat["pick"], choice=chosen["name"].lower())),
-            say(fill(rng, cat["close"], full=full),
-                [item(chosen["name"], size=size)]),
+            say(fill(rng, cat["close"], full=full)),
         ]
     return turns
 
 
 def vague_request(rng, menu, cat):
-    """Customer describes what they want rather than naming it. No order."""
+    """Customer describes what they want rather than naming it."""
     trait = rng.choice(cat["traits"])
     matches = [d for d in available(menu) if d["family"] == trait["family"]]
     if not matches:
@@ -496,13 +481,8 @@ def build_record(rng, name, tpl):
                  "content": tpl["system_prompt"].format(brand=brand, menu=menu_text)}]
     messages += [{"role": role, "content": content} for role, content in turns]
 
-    # Per record, not per category: invalid_size and ambiguous_match end either
-    # at the question or at the corrected order, depending on the draw.
-    ends_in_order = "<tool_call>" in messages[-1]["content"]
-
     return {"messages": messages,
-            "meta": {"category": name, "brand": brand, "voice": tpl["voice"],
-                     "expects_order": ends_in_order}}
+            "meta": {"category": name, "brand": brand, "voice": tpl["voice"]}}
 
 
 def load_templates(path):
