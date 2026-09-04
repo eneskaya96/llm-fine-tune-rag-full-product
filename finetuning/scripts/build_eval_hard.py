@@ -38,12 +38,7 @@ def build(example):
 
     return {
         "messages": messages,
-        "meta": {
-            "category": example["category"],
-            "brand": example["brand"],
-            "voice": "friendly",
-            "split": "hard",
-        },
+        "meta": {"category": example["category"], "brand": example["brand"]},
     }
 
 

@@ -481,8 +481,12 @@ def build_record(rng, name, tpl):
                  "content": tpl["system_prompt"].format(brand=brand, menu=menu_text)}]
     messages += [{"role": role, "content": content} for role, content in turns]
 
+    # `brand` is here for the generator's own summary, which counts distinct
+    # brands as a check that menus are not repeating. The voice is the file
+    # name, and repeating it in every record would be a second place to be
+    # wrong about it.
     return {"messages": messages,
-            "meta": {"category": name, "brand": brand, "voice": tpl["voice"]}}
+            "meta": {"category": name, "brand": brand}}
 
 
 def load_templates(path):
